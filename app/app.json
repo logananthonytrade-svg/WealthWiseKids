@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "WealthWise Kids",
+    "slug": "wealthwisekids",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B3A6B"
+    },
+    "ios": {
+      "bundleIdentifier": "com.yourname.wealthwisekids",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used for profile photo",
+        "NSPhotoLibraryUsageDescription": "Used for profile photo"
+      }
+    },
+    "android": {
+      "package": "com.yourname.wealthwisekids",
+      "versionCode": 1,
+      "permissions": ["NOTIFICATIONS"]
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-secure-store"
+    ]
+  }
+}

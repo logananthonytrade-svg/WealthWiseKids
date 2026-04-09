@@ -1,0 +1,7 @@
+-- ============================================================
+-- WealthWise Kids — Main Schema (all 17 tables)
+-- ============================================================
+-- Generate this file with Claude using the database schema prompt
+-- in app.txt (Phase 2, Part C), then paste it here and run it
+-- in Supabase SQL Editor BEFORE running 002_bot_tables.sql
+-- ============================================================
