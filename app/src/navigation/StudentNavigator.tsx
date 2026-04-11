@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import SchoolsScreen from '../screens/student/SchoolsScreen';
 import ProgressScreen from '../screens/student/ProgressScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
+import StoreScreen from '../screens/student/StoreScreen';
 import LessonViewerScreen from '../screens/student/LessonViewerScreen';
+import ChapterQuizScreen from '../screens/student/ChapterQuizScreen';
 import QuizIntroScreen from '../screens/student/QuizIntroScreen';
 import QuizScreen from '../screens/student/QuizScreen';
 import QuizResultsScreen from '../screens/student/QuizResultsScreen';
@@ -16,15 +18,25 @@ import UpgradeScreen from '../screens/paywall/UpgradeScreen';
 
 
 export type StudentTabParamList = {
-  Schools: undefined;
-  Budget: undefined;
+  Schools:  undefined;
+  Budget:   undefined;
+  Store:    undefined;
   Progress: undefined;
-  Profile: undefined;
+  Profile:  undefined;
 };
 
 export type StudentStackParamList = {
   StudentTabs: undefined;
   LessonViewer: { schoolId: number; schoolTitle: string };
+  ChapterQuiz: {
+    schoolId: number;
+    schoolTitle: string;
+    lessonId: string;
+    lessonTitle: string;
+    lessonNumber: number;
+    totalLessons: number;
+    isLastLesson: boolean;
+  };
   QuizIntro: { schoolId: number; schoolTitle: string; lessonCount: number };
   Quiz: { schoolId: number };
   QuizResults: {
@@ -51,19 +63,21 @@ function StudentTabs() {
         tabBarStyle: { backgroundColor: '#fff', borderTopColor: '#eee' },
         tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => {
           const icons: Record<string, string> = {
-            Schools: focused ? 'school' : 'school-outline',
-            Budget: focused ? 'wallet' : 'wallet-outline',
-            Progress: focused ? 'trophy' : 'trophy-outline',
-            Profile: focused ? 'person' : 'person-outline',
+            Schools:  focused ? 'school'  : 'school-outline',
+            Budget:   focused ? 'wallet'  : 'wallet-outline',
+            Store:    focused ? 'bag'     : 'bag-outline',
+            Progress: focused ? 'trophy'  : 'trophy-outline',
+            Profile:  focused ? 'person'  : 'person-outline',
           };
           return <Ionicons name={icons[route.name] as any} size={size} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Schools" component={SchoolsScreen} />
-      <Tab.Screen name="Budget" component={SpendingReportsScreen} />
+      <Tab.Screen name="Schools"  component={SchoolsScreen} />
+      <Tab.Screen name="Budget"   component={SpendingReportsScreen} />
+      <Tab.Screen name="Store"    component={StoreScreen} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile"  component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -73,6 +87,7 @@ export default function StudentNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="StudentTabs" component={StudentTabs} />
       <Stack.Screen name="LessonViewer" component={LessonViewerScreen} />
+      <Stack.Screen name="ChapterQuiz" component={ChapterQuizScreen} />
       <Stack.Screen name="QuizIntro" component={QuizIntroScreen} />
       <Stack.Screen name="Quiz" component={QuizScreen} />
       <Stack.Screen name="QuizResults" component={QuizResultsScreen} />

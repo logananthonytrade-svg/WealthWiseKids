@@ -8,7 +8,7 @@ import { RouteProp } from '@react-navigation/native';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import supabase from '../../lib/supabase';
 import useAuthStore, { type AuthState } from '../../store/authStore';
-import { awardCoins, checkAndAwardBadges } from '../../utils/badgeUtils';
+import { checkAndAwardBadges } from '../../utils/badgeUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
 
@@ -21,13 +21,28 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
   const { schoolId, score, passed, answers } = route.params;
   const selectedChild = useAuthStore((s: AuthState) => s.selectedChild);
 
-  const [newBadges, setNewBadges] = React.useState<BadgeRecord[]>([]);
+  const [newBadges, setNewBadges]     = React.useState<BadgeRecord[]>([]);
+  const [schoolCoins, setSchoolCoins] = React.useState<{ earned: number; percentage: number } | null>(null);
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 50 }).start();
-    if (selectedChild) recordResults();
+    if (selectedChild) {
+      recordResults();
+      fetchSchoolCoins();
+    }
   }, []);
+
+  const fetchSchoolCoins = async () => {
+    if (!selectedChild) return;
+    const { data } = await supabase
+      .from('school_coin_awards')
+      .select('best_coins_earned, best_percentage')
+      .eq('child_id', selectedChild.id)
+      .eq('school_id', schoolId)
+      .maybeSingle();
+    if (data) setSchoolCoins({ earned: data.best_coins_earned ?? 0, percentage: data.best_percentage ?? 0 });
+  };
 
   const recordResults = async () => {
     if (!selectedChild) return;
@@ -43,20 +58,12 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
       attempted_at: new Date().toISOString(),
     });
 
-    // 2. Award coins
-    const coinsEarned = passed ? 100 : 20;
-    await awardCoins(
-      childId,
-      coinsEarned,
-      passed ? `Passed School ${schoolId} quiz` : `Completed School ${schoolId} quiz attempt`
-    );
-
     if (passed) {
-      // 3. Award graduation badge
+      // 2. Award graduation badge
       const badges = await checkAndAwardBadges(childId, 'school_complete', String(schoolId));
       if (badges.length > 0) setNewBadges(badges);
 
-      // 4. Check for 100% badge
+      // 3. Check for 100% badge
       if (score === 100) {
         const perfBadges = await checkAndAwardBadges(childId, 'quiz_perfect');
         if (perfBadges.length > 0) setNewBadges((prev: BadgeRecord[]) => [...prev, ...perfBadges]);
@@ -91,9 +98,16 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
             : `You got ${correctCount} out of ${answers.length} correct.`}
         </Text>
 
-        {/* Coins earned */}
+        {/* School coin total */}
         <View style={styles.rewardRow}>
-          <Text style={styles.rewardText}>💰 +{passed ? 100 : 20} WealthCoins earned!</Text>
+          {schoolCoins != null ? (
+            <Text style={styles.rewardText}>
+              💰 School coins: {schoolCoins.earned}/150 earned
+              {schoolCoins.percentage > 0 ? ` · ${schoolCoins.percentage.toFixed(0)}%` : ''}
+            </Text>
+          ) : (
+            <Text style={styles.rewardText}>💰 Coins tracked by chapter quiz scores</Text>
+          )}
         </View>
 
         {/* Missed topics — only when failed */}

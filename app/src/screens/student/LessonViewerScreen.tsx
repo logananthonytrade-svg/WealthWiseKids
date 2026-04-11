@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, Animated,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import LessonCard from '../../components/lessons/LessonCard';
 import LessonProgressBar from '../../components/lessons/LessonProgressBar';
-import { updateStreak } from '../../utils/streakUtils';
-import { awardCoins, checkAndAwardBadges } from '../../utils/badgeUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
+import { LessonSection } from '../../components/lessons/RichLessonContent';
 
 type Props = {
   navigation: StackNavigationProp<StudentStackParamList, 'LessonViewer'>;
@@ -27,24 +26,28 @@ interface Lesson {
   lesson_number: number;
   lesson_type: string;
   fun_fact: string | null;
+  sections?: LessonSection[] | null;
 }
 
 export default function LessonViewerScreen({ navigation, route }: Props) {
   const { schoolId, schoolTitle } = route.params;
   const selectedChild = useAuthStore((s) => s.selectedChild);
 
-  const [lessons, setLessons]             = useState<Lesson[]>([]);
-  const [completedIds, setCompleted]      = useState<Set<string>>(new Set());
-  const [currentIndex, setCurrentIndex]   = useState(0);
-  const [loading, setLoading]             = useState(true);
-  const [newBadges, setNewBadges]         = useState<BadgeRecord[]>([]);
+  const [lessons, setLessons]           = useState<Lesson[]>([]);
+  const [completedIds, setCompleted]    = useState<Set<string>>(new Set());
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading]           = useState(true);
+  const [newBadges, setNewBadges]       = useState<BadgeRecord[]>([]);
 
   // Slide animation
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    loadLessons();
-  }, []);
+  // Reload whenever we regain focus (returns from ChapterQuiz)
+  useFocusEffect(
+    useCallback(() => {
+      loadLessons();
+    }, [schoolId])
+  );
 
   const loadLessons = async () => {
     const [lessonsRes, progressRes] = await Promise.all([
@@ -55,7 +58,7 @@ export default function LessonViewerScreen({ navigation, route }: Props) {
         .order('lesson_number', { ascending: true }),
       supabase
         .from('student_progress')
-        .select('lesson_id, completed')
+        .select('lesson_id, completed, chapter_quiz_passed')
         .eq('child_id', selectedChild!.id)
         .eq('school_id', schoolId),
     ]);
@@ -63,11 +66,15 @@ export default function LessonViewerScreen({ navigation, route }: Props) {
     const lessonData = lessonsRes.data ?? [];
     const progress   = progressRes.data ?? [];
 
+    // A lesson is "fully done" when it's completed AND chapter quiz passed
+    // (legacy: completed=true with no chapter_quiz_passed col → treat as done)
     const completedSet = new Set(
-      progress.filter((p) => p.completed).map((p) => p.lesson_id)
+      progress
+        .filter((p) => p.completed && (p.chapter_quiz_passed !== false))
+        .map((p) => p.lesson_id)
     );
 
-    // Resume from the first incomplete lesson
+    // Resume from the first chapter not yet done
     const firstIncomplete = lessonData.findIndex((l) => !completedSet.has(l.id));
     const startIndex = firstIncomplete >= 0 ? firstIncomplete : 0;
 
@@ -77,81 +84,28 @@ export default function LessonViewerScreen({ navigation, route }: Props) {
     setLoading(false);
   };
 
-  const handleContinue = async () => {
-    if (!selectedChild || lessons.length === 0) return;
-
-    const lesson        = lessons[currentIndex];
-    const childId       = selectedChild.id;
-
-    // 1. Mark lesson as complete in student_progress
-    await supabase.from('student_progress').upsert({
-      child_id: childId,
-      school_id: schoolId,
-      lesson_id: lesson.id,
-      completed: true,
-      completed_at: new Date().toISOString(),
-    }, { onConflict: 'child_id,lesson_id' });
-
-    const newCompleted = new Set(completedIds).add(lesson.id);
-    setCompleted(newCompleted);
-
-    // 2. Award 10 WealthCoins
-    await awardCoins(childId, 10, `Completed lesson: ${lesson.title}`);
-
-    // 3. Update streak
-    await updateStreak(childId);
-
-    // 4. Check badges
-    const badges: BadgeRecord[] = [];
-
-    // First-ever lesson
-    if (completedIds.size === 0) {
-      const b = await checkAndAwardBadges(childId, 'lesson_complete', '1');
-      badges.push(...b);
-    }
-
-    // Check "lessons in a day"
-    const todayStr = new Date().toISOString().split('T')[0];
-    const { count } = await supabase
-      .from('student_progress')
-      .select('*', { count: 'exact', head: true })
-      .eq('child_id', childId)
-      .eq('completed', true)
-      .gte('completed_at', `${todayStr}T00:00:00`);
-
-    if ((count ?? 0) >= 3) {
-      const b = await checkAndAwardBadges(childId, 'lessons_in_day', '3');
-      badges.push(...b);
-    }
-
-    if (badges.length > 0) setNewBadges(badges);
-
-    // 5. Navigate to next lesson or quiz intro
+  // Called when user finishes reading the chapter (scroll gate satisfied)
+  // Navigate to the chapter quiz — completion is recorded there on pass
+  const handleContinue = () => {
+    if (lessons.length === 0) return;
+    const lesson       = lessons[currentIndex];
     const isLastLesson = currentIndex === lessons.length - 1;
 
-    if (isLastLesson) {
-      navigation.navigate('QuizIntro', {
-        schoolId,
-        schoolTitle,
-        lessonCount: lessons.length,
-      });
-      return;
-    }
-
-    // Animate slide: current slides left, next slides in from right
-    Animated.sequence([
-      Animated.timing(slideAnim, { toValue: -400, duration: 250, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 400, duration: 0, useNativeDriver: true }),
-    ]).start(() => {
-      setCurrentIndex((i) => i + 1);
-      Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
+    navigation.navigate('ChapterQuiz', {
+      schoolId,
+      schoolTitle,
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      lessonNumber: lesson.lesson_number,
+      totalLessons: lessons.length,
+      isLastLesson,
     });
   };
 
   if (loading || lessons.length === 0) {
     return (
       <SafeAreaView style={styles.loading}>
-        <Text style={styles.loadingText}>Loading lessons…</Text>
+        <Text style={styles.loadingText}>Loading chapters…</Text>
       </SafeAreaView>
     );
   }
@@ -173,7 +127,7 @@ export default function LessonViewerScreen({ navigation, route }: Props) {
           lesson={currentLesson}
           totalLessons={lessons.length}
           onContinue={handleContinue}
-          continueLabel={currentIndex === lessons.length - 1 ? 'Finish & Take Quiz' : 'Continue'}
+          continueLabel="Take Chapter Quiz →"
         />
       </Animated.View>
 

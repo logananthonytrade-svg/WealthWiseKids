@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
+import RichLessonContent, { LessonSection } from './RichLessonContent';
 
 interface Lesson {
   id: string;
@@ -9,6 +11,7 @@ interface Lesson {
   content: string;
   lesson_number: number;
   fun_fact?: string | null;
+  sections?: LessonSection[] | null;
 }
 
 interface Props {
@@ -18,19 +21,68 @@ interface Props {
   continueLabel?: string;
 }
 
+const SCROLL_THRESHOLD = 60; // px from bottom to consider "read"
+
 export default function LessonCard({ lesson, totalLessons, onContinue, continueLabel = 'Continue' }: Props) {
+  const [readyToContinue, setReadyToContinue] = useState(false);
+  const scrollViewRef   = useRef<ScrollView>(null);
+  const viewHeightRef   = useRef(0);
+  const contentHeightRef = useRef(0);
+
+  const checkIfScrollNeeded = () => {
+    if (viewHeightRef.current > 0 && contentHeightRef.current > 0) {
+      if (contentHeightRef.current <= viewHeightRef.current + SCROLL_THRESHOLD) {
+        setReadyToContinue(true);
+      }
+    }
+  };
+
+  const handleLayout = (event: { nativeEvent: { layout: { height: number } } }) => {
+    viewHeightRef.current = event.nativeEvent.layout.height;
+    checkIfScrollNeeded();
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (readyToContinue) return;
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    if (distanceFromBottom <= SCROLL_THRESHOLD) {
+      setReadyToContinue(true);
+    }
+  };
+
+  const handleContentSizeChange = (_width: number, contentHeight: number) => {
+    contentHeightRef.current = contentHeight;
+    checkIfScrollNeeded();
+  };
+
+  const hasSections = lesson.sections && lesson.sections.length > 0;
+
   return (
     <View style={styles.container}>
       {/* Lesson counter */}
       <Text style={styles.counter}>
-        Lesson {lesson.lesson_number} of {totalLessons}
+        Chapter {lesson.lesson_number} of {totalLessons}
       </Text>
 
       <Text style={styles.title}>{lesson.title}</Text>
 
       {/* Scrollable content area */}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.body}>{lesson.content}</Text>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={100}
+        onContentSizeChange={handleContentSizeChange}
+        onLayout={handleLayout}
+      >
+        {hasSections ? (
+          <RichLessonContent sections={lesson.sections!} />
+        ) : (
+          <Text style={styles.body}>{lesson.content}</Text>
+        )}
 
         {/* Fun Fact callout */}
         {lesson.fun_fact ? (
@@ -43,15 +95,21 @@ export default function LessonCard({ lesson, totalLessons, onContinue, continueL
           </View>
         ) : null}
 
-        {/* Bottom spacer so content is not hidden under button */}
-        <View style={{ height: 100 }} />
+        {/* Bottom spacer */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Continue button — rendered outside ScrollView so it sticks at bottom */}
+      {/* Continue button — sticks at bottom */}
       <View style={styles.btnContainer}>
-        <TouchableOpacity style={styles.continueBtn} onPress={onContinue} activeOpacity={0.85}>
-          <Text style={styles.continueBtnText}>{continueLabel} →</Text>
-        </TouchableOpacity>
+        {!readyToContinue ? (
+          <View style={styles.scrollHint}>
+            <Text style={styles.scrollHintText}>↓  Keep reading to continue</Text>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.continueBtn} onPress={onContinue} activeOpacity={0.85}>
+            <Text style={styles.continueBtnText}>{continueLabel} →</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -65,11 +123,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 24, marginTop: 16,
   },
   title: {
-    fontSize: 24, fontWeight: '800', color: '#1B3A6B',
+    fontSize: 22, fontWeight: '800', color: '#1B3A6B',
     marginHorizontal: 24, marginTop: 8, marginBottom: 16,
+    lineHeight: 30,
   },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 4 },
   body: { fontSize: 17, color: '#222', lineHeight: 28 },
   funFact: {
     flexDirection: 'row', gap: 12, marginTop: 28,
@@ -85,6 +144,13 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 24, paddingBottom: 36, paddingTop: 16,
     backgroundColor: '#fff',
+  },
+  scrollHint: {
+    borderRadius: 50, paddingVertical: 16, alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+  },
+  scrollHintText: {
+    color: '#888', fontSize: 14, fontWeight: '600',
   },
   continueBtn: {
     backgroundColor: '#1B3A6B', borderRadius: 50,

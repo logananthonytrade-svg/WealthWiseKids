@@ -44,6 +44,7 @@ export default function SchoolsScreen() {
   const [subscription, setSub]          = useState<'free' | 'premium' | 'family'>('free');
   const [loading, setLoading]           = useState(true);
   const [lockedModal, setLockedModal]   = useState<School | null>(null);
+  const [coinAwards, setCoinAwards]       = useState<Record<number, { coins: number; percentage: number; points: number }>>({});
 
   useEffect(() => { loadData(); }, []);
 
@@ -51,13 +52,14 @@ export default function SchoolsScreen() {
     if (!selectedChild) return;
     const childId = selectedChild.id;
 
-    const [schoolsRes, streakRes, coinsRes, progressRes, subRes] = await Promise.all([
+    const [schoolsRes, streakRes, coinsRes, progressRes, subRes, coinAwardsRes] = await Promise.all([
       supabase.from('schools').select('*').order('order_number'),
       supabase.from('streaks').select('current_streak').eq('child_id', childId).maybeSingle(),
       supabase.from('wealth_coins').select('balance').eq('child_id', childId).maybeSingle(),
       supabase.from('student_progress').select('school_id, completed').eq('child_id', childId),
       supabase.from('subscriptions').select('plan_type, status, current_period_end')
         .eq('user_id', useAuthStore.getState().user!.id).maybeSingle(),
+      supabase.from('school_coin_awards').select('school_id, best_coins_earned, best_percentage, best_total_points').eq('child_id', childId),
     ]);
 
     const schoolList = (schoolsRes.data ?? []) as School[];
@@ -93,12 +95,22 @@ export default function SchoolsScreen() {
     const isActive = subData?.status === 'active' &&
       (!subData?.current_period_end || new Date(subData.current_period_end) > new Date());
 
+    const awardsMap: Record<number, { coins: number; percentage: number; points: number }> = {};
+    for (const a of (coinAwardsRes.data ?? [])) {
+      awardsMap[a.school_id] = {
+        coins:      a.best_coins_earned ?? 0,
+        percentage: a.best_percentage   ?? 0,
+        points:     a.best_total_points ?? 0,
+      };
+    }
+
     setSchools(schoolList);
     setStreak(streakRes.data?.current_streak ?? 0);
     setCoins(coinsRes.data?.balance ?? 0);
     setProgress(progressMap);
     setComplete(completedSet);
     setSub(isActive ? plan : 'free');
+    setCoinAwards(awardsMap);
     setLoading(false);
   };
 
@@ -112,9 +124,9 @@ export default function SchoolsScreen() {
       }
     }
 
-    // Premium lock
+    // Premium lock — show upgrade modal instead of navigating directly
     if (school.is_premium && subscription === 'free') {
-      navigation.navigate('Upgrade');
+      setLockedModal({ ...school, description: 'Upgrade to Premium to unlock this school and all future schools.' });
       return;
     }
 
@@ -178,6 +190,14 @@ export default function SchoolsScreen() {
                 {!isLocked && prog.total > 0 && (
                   <View style={styles.progressWrap}>
                     <LessonProgressBar completed={prog.completed} total={prog.total} />
+                    {coinAwards[school.id] && (
+                      <Text style={styles.coinProgress}>
+                        💰 {coinAwards[school.id].coins}/150 coins
+                        {coinAwards[school.id].percentage > 0
+                          ? ` · ${coinAwards[school.id].percentage.toFixed(0)}%`
+                          : ''}
+                      </Text>
+                    )}
                   </View>
                 )}
                 {locked && (
@@ -189,16 +209,32 @@ export default function SchoolsScreen() {
         }}
       />
 
-      {/* Locked pre-req modal */}
+      {/* Locked modal (pre-req or premium) */}
       <Modal visible={!!lockedModal} transparent animationType="fade">
-        <TouchableOpacity style={styles.overlay} onPress={() => setLockedModal(null)}>
+        <TouchableOpacity style={styles.overlay} onPress={() => setLockedModal(null)} activeOpacity={1}>
           <View style={styles.modalCard}>
             <Text style={styles.modalIcon}>🔒</Text>
-            <Text style={styles.modalTitle}>Not yet!</Text>
+            <Text style={styles.modalTitle}>
+              {lockedModal?.is_premium && subscription === 'free' ? 'Premium School' : 'Not yet!'}
+            </Text>
             <Text style={styles.modalDesc}>{lockedModal?.description}</Text>
-            <TouchableOpacity style={styles.modalBtn} onPress={() => setLockedModal(null)}>
-              <Text style={styles.modalBtnText}>Got it</Text>
-            </TouchableOpacity>
+            {lockedModal?.is_premium && subscription === 'free' ? (
+              <>
+                <TouchableOpacity
+                  style={styles.modalBtn}
+                  onPress={() => { setLockedModal(null); navigation.navigate('Upgrade'); }}
+                >
+                  <Text style={styles.modalBtnText}>Upgrade to Premium ⭐</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalSecondary} onPress={() => setLockedModal(null)}>
+                  <Text style={styles.modalSecondaryText}>Maybe later</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.modalBtn} onPress={() => setLockedModal(null)}>
+                <Text style={styles.modalBtnText}>Got it</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableOpacity>
       </Modal>
@@ -244,5 +280,8 @@ const styles = StyleSheet.create({
   modalTitle:  { fontSize: 20, fontWeight: '800', color: '#1B3A6B', marginBottom: 8 },
   modalDesc:   { fontSize: 14, color: '#444', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   modalBtn:    { backgroundColor: '#1B3A6B', borderRadius: 50, paddingVertical: 12, paddingHorizontal: 32 },
-  modalBtnText:{ color: '#fff', fontWeight: '700' },
+  modalBtnText:    { color: '#fff', fontWeight: '700' },
+  modalSecondary:  { paddingVertical: 10 },
+  modalSecondaryText: { color: '#888', fontSize: 14 },
+  coinProgress:    { fontSize: 12, color: '#F0A500', fontWeight: '600', marginTop: 4 },
 });

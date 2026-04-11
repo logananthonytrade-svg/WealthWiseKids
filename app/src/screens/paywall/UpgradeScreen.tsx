@@ -12,12 +12,12 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 const PLANS = {
   monthly: {
-    individual: { label: 'Individual', price: '$4.99', period: '/month', priceKey: 'INDIVIDUAL_MONTHLY' },
-    family:     { label: 'Family (up to 5 kids)', price: '$8.99', period: '/month', priceKey: 'FAMILY_MONTHLY' },
+    individual: { label: 'Individual', price: '$9.99',  period: '/month', priceKey: 'INDIVIDUAL_MONTHLY' },
+    family:     { label: 'Family (up to 5 kids)', price: '$14.99', period: '/month', priceKey: 'FAMILY_MONTHLY' },
   },
   yearly: {
-    individual: { label: 'Individual', price: '$39.99', period: '/year', priceKey: 'INDIVIDUAL_YEARLY', savings: 'Save 33%' },
-    family:     { label: 'Family (up to 5 kids)', price: '$69.99', period: '/year', priceKey: 'FAMILY_YEARLY', savings: 'Save 35%' },
+    individual: { label: 'Individual', price: '$79.99', period: '/year', priceKey: 'INDIVIDUAL_YEARLY', savings: 'Save 33%' },
+    family:     { label: 'Family (up to 5 kids)', price: '$119.99', period: '/year', priceKey: 'FAMILY_YEARLY', savings: 'Save 33%' },
   },
 };
 
@@ -140,6 +140,7 @@ export default function UpgradeScreen() {
           <Text style={styles.featureTitle}>What you unlock:</Text>
           {[
             '📚 All 7 financial literacy schools',
+            '💰 150 bonus WealthCoins every month',
             '🏦 Bank account connection & budgeting',
             '📊 Spending reports & insights',
             '🏆 Full badge & coin rewards system',

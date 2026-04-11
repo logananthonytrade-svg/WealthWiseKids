@@ -60,6 +60,7 @@ export default function QuizScreen({ navigation, route }: Props) {
       .from('quiz_questions')
       .select('*')
       .eq('school_id', schoolId)
+      .is('lesson_id', null)   // school-wide final quiz only (chapter quizzes have a lesson_id)
       .order('order_number', { ascending: true });
 
     setQuestions(shuffle(data ?? []));

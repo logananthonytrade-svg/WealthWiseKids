@@ -11,7 +11,8 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "esnext",
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "5.0",
+    "types": ["node"]
   },
   "include": [
     "**/*.ts",
