@@ -1,0 +1,365 @@
+================================================================================
+  WEALTHWISE KIDS — SERVICES & CONNECTIONS REFERENCE
+  Last updated: April 2026
+  Keep this file updated every time a new service or env var is added.
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 1. SUPABASE  (database + auth)
+    https://app.supabase.com
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Where to find your keys:
+   Supabase dashboard → Project Settings → API
+
+ Keys needed:
+   EXPO_PUBLIC_SUPABASE_URL         → "Project URL"  (used by the mobile app)
+   EXPO_PUBLIC_SUPABASE_ANON_KEY    → "anon public"  (used by the mobile app)
+   SUPABASE_URL                     → same Project URL (used by Railway backend)
+   SUPABASE_SERVICE_ROLE_KEY        → "service_role" (used by Railway backend ONLY
+                                       — NEVER expose this in the app)
+
+ Files that use these:
+   app/.env                         → EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+   Railway environment variables    → SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+
+ MIGRATIONS — must be run in order in the Supabase SQL Editor
+   (Dashboard → SQL Editor → paste each file and click Run)
+
+   supabase/migrations/001_main_schema.sql     ← run first
+   supabase/migrations/002_bot_tables.sql
+   supabase/migrations/003_lesson_chapters.sql ← adds rich content + chapter quiz cols
+   supabase/migrations/004_school_coins.sql    ← adds coin tier tables (quiz_best_scores,
+                                                  school_coin_awards)
+   supabase/migrations/005_store.sql           ← adds coin_packs, store_items,
+                                                  item_purchases, coin_pack_purchases,
+                                                  monthly_bonus_log
+
+ Auth settings to enable:
+   Authentication → Providers → Email: ON
+   Authentication → Email Templates: customise as desired
+   Authentication → URL Configuration → Site URL: your app URL or localhost
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 2. RAILWAY  (backend server hosting)
+    https://railway.app
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ The Express.js server lives in: backend/
+
+ Deploy command (already configured):
+   Start command: node src/server.js
+
+ All environment variables must be set in:
+   Railway dashboard → your project → Variables
+
+ Full list of Railway environment variables:
+
+   # Supabase
+   SUPABASE_URL                    = https://xxxx.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY       = eyJ...  (service role key — keep secret)
+
+   # Stripe — Subscriptions
+   STRIPE_SECRET_KEY               = sk_live_...  (or sk_test_... for testing)
+   STRIPE_WEBHOOK_SECRET           = whsec_...    (from subscription webhook endpoint)
+   STRIPE_PRICE_PREMIUM_MONTHLY    = price_...    (Stripe price ID — $9.99/mo individual)
+   STRIPE_PRICE_PREMIUM_YEARLY     = price_...    (Stripe price ID — $79.99/yr individual)
+   STRIPE_PRICE_FAMILY_MONTHLY     = price_...    (Stripe price ID — $14.99/mo family)
+   STRIPE_PRICE_FAMILY_YEARLY      = price_...    (Stripe price ID — $119.99/yr family)
+
+   # Stripe — Coin Pack Purchases  ← NEW (added April 2026)
+   STRIPE_COINS_WEBHOOK_SECRET     = whsec_...    (from coin pack webhook endpoint —
+                                                    DIFFERENT secret to the one above)
+
+   # Plaid
+   PLAID_CLIENT_ID                 = your Plaid client ID
+   PLAID_SECRET                    = your Plaid secret (sandbox or production)
+   PLAID_ENV                       = sandbox  (change to "production" when going live)
+
+   # App
+   APP_URL                         = https://wealthwisekids.app
+                                     (used for Stripe success/cancel redirect URLs)
+   PORT                            = 3001  (Railway sets this automatically)
+
+ After adding variables:
+   Railway will auto-redeploy. Check the deployment logs to confirm server starts.
+   The health check endpoint is: GET https://your-railway-url.up.railway.app/health
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 3. STRIPE  (subscriptions + coin purchases)
+    https://dashboard.stripe.com
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ PRODUCTS TO CREATE in the Stripe dashboard:
+
+ ── Subscription Plans (mode: subscription) ─────────────────────────────────
+
+   Product: "WealthWise Kids Premium – Individual"
+     Price 1: $9.99 / month  → copy the price ID into STRIPE_PRICE_PREMIUM_MONTHLY
+     Price 2: $79.99 / year  → copy the price ID into STRIPE_PRICE_PREMIUM_YEARLY
+
+   Product: "WealthWise Kids Premium – Family"
+     Price 1: $14.99 / month → copy the price ID into STRIPE_PRICE_FAMILY_MONTHLY
+     Price 2: $119.99 / year → copy the price ID into STRIPE_PRICE_FAMILY_YEARLY
+
+ ── Coin Packs (mode: payment — one-time, NO Stripe products needed) ─────────
+
+   Coin pack prices are set dynamically from the coin_packs database table.
+   No Stripe products needed — the backend passes price_data inline.
+   The pack prices are:
+     Starter    $2.99  (300 coins)
+     Popular    $7.99  (850 coins)
+     Best Value $17.99 (2,200 coins)
+     Mega       $44.99 (5,500 coins)
+
+ WEBHOOKS TO CREATE:
+   Stripe Dashboard → Developers → Webhooks → Add endpoint
+
+   Endpoint 1 — Subscription events
+     URL:    https://your-railway-url.up.railway.app/subscriptions/webhook
+     Events: checkout.session.completed
+             customer.subscription.updated
+             customer.subscription.deleted
+             invoice.payment_failed
+     After creating: copy "Signing secret" → STRIPE_WEBHOOK_SECRET in Railway
+
+   Endpoint 2 — Coin pack purchases  ← NEW
+     URL:    https://your-railway-url.up.railway.app/store/coins-webhook
+     Events: checkout.session.completed   (only this one)
+     After creating: copy "Signing secret" → STRIPE_COINS_WEBHOOK_SECRET in Railway
+
+ CUSTOMER PORTAL (for users to manage/cancel subscriptions):
+   Stripe Dashboard → Settings → Customer Portal → Activate it
+   This is used by the billing management flow in the app.
+
+ TEST MODE:
+   Use test mode keys (pk_test_..., sk_test_...) while building.
+   Use Stripe's test card: 4242 4242 4242 4242, any future date, any CVC.
+   Switch to live keys before going live in the App Store.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 4. PLAID  (bank account connection)
+    https://dashboard.plaid.com
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Where to find your keys:
+   Plaid Dashboard → Team Settings → Keys
+
+ Keys needed (go into Railway environment variables):
+   PLAID_CLIENT_ID  = your client ID
+   PLAID_SECRET     = your sandbox secret  (use "sandbox" secret in dev,
+                                             "production" secret when live)
+   PLAID_ENV        = sandbox  (or "production" when going live)
+
+ Products to enable in Plaid Dashboard:
+   Transactions
+   Auth
+   Identity (optional — for account owner verification)
+
+ Redirect URIs (add in Plaid Dashboard → API):
+   wealthwisekids://plaid-redirect   (matches the app scheme in app.json)
+
+ Plaid environment flow:
+   sandbox    = fake bank logins, use for all testing
+   development = real bank logins, limited connections, free
+   production  = real bank logins, per-connection billing, requires Plaid approval
+
+ NOTE: When you go to production, Plaid requires a compliance review.
+ Start that process early — it can take 2–4 weeks.
+
+ The token stored in Supabase is currently base64-encoded (light obfuscation).
+ Before going to production, upgrade backend/src/routes/plaid.js to use
+ AES-256 encryption (there is a comment marking the line to change).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 5. EXPO / EAS  (mobile app build & publish)
+    https://expo.dev
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ The app cannot run on plain Expo Go because it uses native modules:
+   expo-secure-store, expo-notifications, Stripe SDK, Plaid Link
+ You MUST use an EAS Development Build for device testing.
+
+ SETUP STEPS:
+   npm install -g eas-cli
+   cd app
+   eas login                    ← log in with your Expo account
+   eas build:configure          ← creates eas.json
+
+ ENVIRONMENT VARIABLES for the app (set in app/.env AND in EAS):
+   EXPO_PUBLIC_SUPABASE_URL          = https://xxxx.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY     = eyJ...
+   EXPO_PUBLIC_API_URL               = https://your-railway-url.up.railway.app
+
+ To add them to EAS so they are available in cloud builds:
+   eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "..."
+   eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "..."
+   eas secret:create --scope project --name EXPO_PUBLIC_API_URL --value "..."
+
+ BUILD COMMANDS:
+   Development build for iOS simulator:
+     eas build --profile development --platform ios
+
+   Development build for Android:
+     eas build --profile development --platform android
+
+   Production build for App Store:
+     eas build --profile production --platform ios
+
+   Production build for Google Play:
+     eas build --profile production --platform android
+
+ BEFORE SUBMITTING TO APP STORE:
+   1. Update app.json:
+      - "bundleIdentifier": change from "com.yourname.wealthwisekids" to your real ID
+      - "package": same for Android
+      - "version" + "buildNumber" / "versionCode"
+   2. Create app icons: ./assets/icon.png (1024x1024 PNG)
+   3. Create splash screen: ./assets/splash.png
+   4. Apple Developer account: $99/year — https://developer.apple.com
+   5. Google Play Console: $25 one-time — https://play.google.com/console
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 6. GITHUB  (code storage + deployment trigger)
+    https://github.com
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Repo:  https://github.com/logananthonytrade-svg/WealthWiseKids
+
+ Branch: main  (the only branch — Railway deploys from main automatically)
+
+ Railway is connected to this repo. Every push to main triggers a redeploy
+ of the backend server automatically.
+
+ DO NOT push secrets (API keys) to GitHub. They go in:
+   - app/.env              (git-ignored — app environment)
+   - Railway Variables     (backend environment)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 7. BOT SERVICE  (AI paper trading bot)
+    bot-service/bot_service.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ This is a Python service — runs separately from the Node backend.
+
+ Environment variables needed:
+   SUPABASE_URL              = same as above
+   SUPABASE_SERVICE_ROLE_KEY = same as above
+   (any trading API keys if connected to a real data feed)
+
+ To run locally:
+   cd bot-service
+   pip install -r requirements.txt
+   python bot_service.py
+
+ For production: deploy as a separate Railway service or a cron job.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 8. LOCAL DEVELOPMENT SETUP
+    (what to do when working on the app on your machine)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ app/.env  (create this file — it is git-ignored)
+   EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   EXPO_PUBLIC_API_URL=http://localhost:3001
+
+ backend/.env  (create this file — it is git-ignored)
+   SUPABASE_URL=https://xxxx.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=eyJ...
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   STRIPE_COINS_WEBHOOK_SECRET=whsec_...
+   STRIPE_PRICE_PREMIUM_MONTHLY=price_...
+   STRIPE_PRICE_PREMIUM_YEARLY=price_...
+   STRIPE_PRICE_FAMILY_MONTHLY=price_...
+   STRIPE_PRICE_FAMILY_YEARLY=price_...
+   PLAID_CLIENT_ID=...
+   PLAID_SECRET=...
+   PLAID_ENV=sandbox
+   APP_URL=http://localhost:3001
+   PORT=3001
+
+ Start the backend:
+   cd backend
+   npm install
+   node src/server.js
+
+ Start the app:
+   cd app
+   npm install
+   npx expo start
+
+ Test Stripe webhooks locally (requires Stripe CLI):
+   stripe listen --forward-to localhost:3001/subscriptions/webhook
+   stripe listen --forward-to localhost:3001/store/coins-webhook
+   (run both in separate terminals — each gets its own whsec_ secret for local use)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 9. QUICK CHECKLIST — "IS EVERYTHING CONNECTED?"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Supabase
+   [ ] All 5 migrations run (001 → 005)
+   [ ] SUPABASE_URL set in Railway
+   [ ] SUPABASE_SERVICE_ROLE_KEY set in Railway
+   [ ] EXPO_PUBLIC_SUPABASE_URL set in app/.env and EAS secrets
+   [ ] EXPO_PUBLIC_SUPABASE_ANON_KEY set in app/.env and EAS secrets
+
+ Stripe — Subscriptions
+   [ ] 4 subscription price IDs created and pasted into Railway vars
+   [ ] Subscription webhook endpoint registered and STRIPE_WEBHOOK_SECRET set
+   [ ] Customer Portal activated in Stripe settings
+
+ Stripe — Coin Packs
+   [ ] Coin pack webhook endpoint registered (separate from subscriptions)
+   [ ] STRIPE_COINS_WEBHOOK_SECRET set in Railway vars
+   [ ] STRIPE_SECRET_KEY set in Railway vars
+
+ Plaid
+   [ ] PLAID_CLIENT_ID + PLAID_SECRET set in Railway
+   [ ] PLAID_ENV=sandbox (or production)
+   [ ] Redirect URI added in Plaid Dashboard
+
+ Railway
+   [ ] Repo connected and autodeploy on main enabled
+   [ ] All environment variables from section 2 above are set
+   [ ] Health check passing: GET /health returns { status: "ok" }
+
+ Expo / EAS
+   [ ] EXPO_PUBLIC_API_URL pointing at Railway deployment URL
+   [ ] app.json bundleIdentifier updated to your real ID
+   [ ] EAS secrets set for all EXPO_PUBLIC_ vars
+   [ ] Development build created and installed on test device
+
+ GitHub
+   [ ] .env files are in .gitignore (never push secrets)
+   [ ] main branch is protected or at least backed up regularly
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 10. COST SUMMARY  (when fully live)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Service            Cost
+ ───────────────────────────────────────────────────────
+ Railway            ~$5–10/mo  (server hosting)
+ Supabase           Free tier to start, ~$25/mo at scale
+ Stripe             2.9% + 30c per transaction (no monthly fee)
+ Plaid              Free sandbox; ~$0.60 per real connection/mo
+ Apple Developer    $99/year (required for App Store)
+ Google Play        $25 one-time
+ Expo EAS           Free tier available; $29/mo for more builds
+ ───────────────────────────────────────────────────────
+ Total (early stage) ~$20–40/mo before significant users
+
+================================================================================
