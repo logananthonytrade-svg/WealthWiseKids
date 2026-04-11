@@ -125,7 +125,7 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
           <>
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => navigation.replace('StudentTabs')}
+              onPress={() => navigation.replace('SwipeHome')}
             >
               <Text style={styles.primaryBtnText}>Continue to Next School 🚀</Text>
             </TouchableOpacity>
