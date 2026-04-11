@@ -37,7 +37,176 @@ function openTool(featureKey: string, navigation: StackNavigationProp<StudentSta
   }
 }
 
-export default function StoreScreen() {
+// ─────────────────────────────────────────────────────────────
+// EARN TAB sub-component
+// ─────────────────────────────────────────────────────────────
+interface CoinEvent {
+  id:          string;
+  coins:       number;
+  reason:      string;
+  created_at:  string;
+}
+
+interface WeeklyEvent {
+  id:          string;
+  title:       string;
+  description: string;
+  reward_coins: number;
+  ends_at:     string;
+  type:        string;
+}
+
+function EarnTab({ balance, childId, streak }: { balance: number; childId: string | null; streak: number }) {
+  const [history,       setHistory]       = useState<CoinEvent[]>([]);
+  const [weeklyEvents,  setWeeklyEvents]  = useState<WeeklyEvent[]>([]);
+  const [loadingInner,  setLoadingInner]  = useState(true);
+
+  useEffect(() => {
+    if (!childId) { setLoadingInner(false); return; }
+    Promise.all([
+      supabase
+        .from('wealth_coins_log')
+        .select('id, coins, reason, created_at')
+        .eq('child_id', childId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('weekly_events')
+        .select('id, title, description, reward_coins, ends_at, type')
+        .gte('ends_at', new Date().toISOString())
+        .order('ends_at'),
+    ]).then(([logRes, evRes]) => {
+      setHistory((logRes.data ?? []) as CoinEvent[]);
+      setWeeklyEvents((evRes.data ?? []) as WeeklyEvent[]);
+      setLoadingInner(false);
+    });
+  }, [childId]);
+
+  const EARN_WAYS = [
+    { emoji: '📚', label: 'Complete a chapter',     coins: '10 coins' },
+    { emoji: '✅', label: 'Pass chapter quiz',       coins: '25 coins' },
+    { emoji: '💯', label: 'Perfect quiz score',      coins: '+50 bonus' },
+    { emoji: '🔥', label: 'Daily login streak',      coins: '5–50 coins' },
+    { emoji: '🏆', label: 'Finish a full school',    coins: '200 coins' },
+    { emoji: '📅', label: 'Weekly event win',        coins: '100–500 coins' },
+  ];
+
+  if (loadingInner) return <ActivityIndicator color="#F0A500" style={{ marginTop: 60 }} />;
+
+  return (
+    <ScrollView contentContainerStyle={earnS.scroll} showsVerticalScrollIndicator={false}>
+
+      {/* Balance banner */}
+      <View style={earnS.balanceBanner}>
+        <Text style={earnS.balanceNum}>💰 {balance.toLocaleString()}</Text>
+        <Text style={earnS.balanceLbl}>Your WealthCoin balance</Text>
+        {streak > 0 && <Text style={earnS.streakPill}>🔥 {streak}-day streak</Text>}
+      </View>
+
+      {/* Weekly events */}
+      {weeklyEvents.length > 0 && (
+        <>
+          <Text style={earnS.sectionTitle}>⚡ This Week's Events</Text>
+          {weeklyEvents.map((ev) => {
+            const daysLeft = Math.ceil(
+              (new Date(ev.ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            );
+            return (
+              <View key={ev.id} style={earnS.eventCard}>
+                <View style={earnS.eventTop}>
+                  <Text style={earnS.eventTitle}>{ev.title}</Text>
+                  <View style={earnS.rewardPill}>
+                    <Text style={earnS.rewardTxt}>+{ev.reward_coins} coins</Text>
+                  </View>
+                </View>
+                <Text style={earnS.eventDesc}>{ev.description}</Text>
+                <Text style={earnS.eventTimer}>{daysLeft} day{daysLeft !== 1 ? 's' : ''} left</Text>
+              </View>
+            );
+          })}
+        </>
+      )}
+
+      {weeklyEvents.length === 0 && (
+        <View style={earnS.noEvents}>
+          <Text style={earnS.noEventsEmoji}>📅</Text>
+          <Text style={earnS.noEventsTxt}>New weekly events drop every Monday!</Text>
+        </View>
+      )}
+
+      {/* How to earn */}
+      <Text style={earnS.sectionTitle}>How to Earn</Text>
+      {EARN_WAYS.map((w) => (
+        <View key={w.label} style={earnS.earnRow}>
+          <Text style={earnS.earnEmoji}>{w.emoji}</Text>
+          <Text style={earnS.earnLabel}>{w.label}</Text>
+          <Text style={earnS.earnCoins}>{w.coins}</Text>
+        </View>
+      ))}
+
+      {/* Recent history */}
+      {history.length > 0 && (
+        <>
+          <Text style={earnS.sectionTitle}>Recent Activity</Text>
+          {history.map((h) => (
+            <View key={h.id} style={earnS.historyRow}>
+              <Text style={earnS.historyReason}>{h.reason}</Text>
+              <Text style={[earnS.historyCoins, h.coins < 0 && earnS.historySpend]}>
+                {h.coins > 0 ? `+${h.coins}` : h.coins} 💰
+              </Text>
+            </View>
+          ))}
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
+const earnS = StyleSheet.create({
+  scroll:        { padding: 16, paddingBottom: 48 },
+  balanceBanner: {
+    backgroundColor: 'rgba(240,165,0,0.1)', borderRadius: 18, padding: 22,
+    alignItems: 'center', marginBottom: 20,
+    borderWidth: 1, borderColor: 'rgba(240,165,0,0.3)',
+  },
+  balanceNum:   { fontSize: 36, fontWeight: '900', color: '#F0A500' },
+  balanceLbl:   { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
+  streakPill:   { marginTop: 10, backgroundColor: 'rgba(255,100,0,0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 4 },
+  sectionTitle: {
+    fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.35)',
+    textTransform: 'uppercase', letterSpacing: 1.2,
+    marginBottom: 10, marginTop: 6,
+  },
+  eventCard: {
+    backgroundColor: 'rgba(27,58,107,0.5)', borderRadius: 16, padding: 16,
+    marginBottom: 10, borderWidth: 1, borderColor: 'rgba(240,165,0,0.2)',
+  },
+  eventTop:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  eventTitle:{ fontSize: 14, fontWeight: '800', color: '#fff', flex: 1 },
+  rewardPill:{ backgroundColor: '#F0A500', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  rewardTxt: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  eventDesc: { fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 17, marginBottom: 6 },
+  eventTimer:{ fontSize: 11, color: '#F0A500', fontWeight: '700' },
+  noEvents:  { alignItems: 'center', paddingVertical: 24, marginBottom: 8 },
+  noEventsEmoji: { fontSize: 32, marginBottom: 8 },
+  noEventsTxt:   { fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' },
+  earnRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  earnEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
+  earnLabel: { flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+  earnCoins: { fontSize: 12, color: '#F0A500', fontWeight: '800' },
+  historyRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  historyReason:{ flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.6)' },
+  historyCoins: { fontSize: 13, fontWeight: '800', color: '#27AE60' },
+  historySpend: { color: '#E74C3C' },
+});
+
+
   const navigation  = useNavigation<StackNavigationProp<StudentStackParamList>>();
   const { selectedChild } = useAuthStore();
   const { isActive }      = useSubscription();
@@ -269,18 +438,7 @@ export default function StoreScreen() {
 
           {/* ═══════════════════ EARN COINS TAB ══════════════ */}
           {activeTab === 'earn' && (
-            <ScrollView
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.toolsEmpty}>
-                <Text style={styles.emptyIcon}>⭐</Text>
-                <Text style={styles.emptyTitle}>Earn WealthCoins</Text>
-                <Text style={styles.emptyDesc}>
-                  Complete lessons, ace quizzes, and keep your streak alive to earn coins — no purchases needed.
-                </Text>
-              </View>
-            </ScrollView>
+            <EarnTab balance={balance} childId={selectedChild?.id ?? null} streak={0} />
           )}
 
           {/* ════════════════════ MY TOOLS TAB ════════════════ */}

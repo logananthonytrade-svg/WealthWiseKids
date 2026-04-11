@@ -32,7 +32,11 @@ const TOOLS: Tool[] = [
     go: (nav) => nav.navigate('Progress'),
   },
   {
-    id: 'bank', emoji: '🏦', label: 'Connect Bank', desc: 'Link your accounts',
+    id: 'invest', emoji: '📈', label: 'Investments', desc: 'Stocks, crypto & real estate',
+    bg: '#0D3D28',
+    go: (nav) => nav.navigate('Investments'),
+  },
+  {
     bg: '#2A0D5E',
     go: (nav) => nav.navigate('ConnectBank'),
   },

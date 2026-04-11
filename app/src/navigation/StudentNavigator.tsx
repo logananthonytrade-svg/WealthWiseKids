@@ -12,6 +12,7 @@ import ConnectBankScreen    from '../screens/student/ConnectBankScreen';
 import UpgradeScreen        from '../screens/paywall/UpgradeScreen';
 import ProfileScreen        from '../screens/student/ProfileScreen';
 import ProgressScreen       from '../screens/student/ProgressScreen';
+import InvestmentScreen     from '../screens/student/InvestmentScreen';
 
 export type StudentStackParamList = {
   SwipeHome:       undefined;
@@ -39,6 +40,7 @@ export type StudentStackParamList = {
   Upgrade:         undefined;
   Profile:         undefined;
   Progress:        undefined;
+  Investments:     undefined;
 };
 
 const Stack = createStackNavigator<StudentStackParamList>();
@@ -57,6 +59,7 @@ export default function StudentNavigator() {
       <Stack.Screen name="Upgrade"         component={UpgradeScreen} />
       <Stack.Screen name="Profile"         component={ProfileScreen} />
       <Stack.Screen name="Progress"        component={ProgressScreen} />
+      <Stack.Screen name="Investments"     component={InvestmentScreen} />
     </Stack.Navigator>
   );
 }
