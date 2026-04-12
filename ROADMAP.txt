@@ -1,0 +1,311 @@
+================================================================================
+  WEALTHWISEKIDS — PRODUCT ROADMAP
+  Branch: Version-1.0 (polish) → Version-2.0 (new features)
+  Updated: April 10, 2026
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  VERSION 1.0  —  POLISH & SHIP
+  Goal: A fully working, App Store-ready product. Everything a user touches
+        should feel complete, load real data, and handle errors gracefully.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. CONTENT — Seed the database with real lesson data                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Write and seed School 1: "Money Basics"
+        5 chapters covering: what is money, earning, spending, saving, budgeting
+        Each chapter = 5–8 slides (text + image/icon) + 5-question quiz
+  [ ] Write and seed School 2: "Banking 101"
+        Topics: checking vs savings, interest, debit cards, overdraft, fees
+  [ ] Write School 3 content outline only (full content in V2)
+  [ ] Seed store items table with real purchasable tools
+        - Budget Tracker (feature_key: budget_tracker) — 150 coins
+        - Savings Calculator (feature_key: savings_calc) — 100 coins
+        - Spending Analyzer (feature_key: spending_analyzer) — 200 coins
+  [ ] Seed badge definitions table
+        - First Lesson, Quiz Ace (100%), 7-Day Streak, School Graduate,
+          Saver (vault first use), Investor (first virtual trade)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2. SCREENS — Complete bare-bones screens                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] ProfileScreen.tsx
+        Currently: just shows avatar emoji + switch child button
+        Needs: dark theme, coin balance, streak display, edit name/avatar,
+               badge showcase (top 3 earned badges), account settings link
+
+  [ ] ProgressScreen.tsx
+        Looks functional but needs: dark theme to match rest of app (#080F1E bg)
+        Test all stat queries work with real seeded data
+
+  [ ] SpendingReportsScreen.tsx
+        Audit: ensure Plaid data renders correctly when bank is connected
+        Add empty state when no bank connected → button to ConnectBank
+
+  [ ] ParentReportsScreen.tsx
+        Audit: confirm it shows per-child lesson progress + coin earnings
+        Add date range filter (last 7 / 30 / 90 days)
+
+  [ ] MyChildrenScreen.tsx
+        Audit: confirm adding/removing children works
+        Add per-child coin balance + lesson progress summary cards
+
+  [ ] ParentSettingsScreen.tsx
+        Audit: spending limit save actually writes to DB
+        Add: notification preferences toggle, account deletion option
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3. AUTH & ONBOARDING — Make the first experience great                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] WelcomeScreen.tsx  — Add app value prop slides (3-screen carousel)
+        Slide 1: "Learn money skills with fun lessons"
+        Slide 2: "Earn WealthCoins, spend on tools & games"
+        Slide 3: "Parents stay in control"
+  [ ] SignUpScreen.tsx   — Validate all fields, show password strength
+  [ ] ParentalConsentScreen.tsx — Wire COPPA consent checkbox to DB flag
+  [ ] CreateChildProfileScreen.tsx — Confirm avatar selection saves correctly
+  [ ] Post-signup: auto-navigate to SwipeHome after first child is created
+  [ ] Forgot password flow (Supabase magic link)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  4. COIN ECONOMY — Wire all earn events to wealth_coins_log                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] On chapter complete → award 10 coins, log to wealth_coins_log
+  [ ] On quiz pass → award 25 coins
+  [ ] On quiz perfect score → award 50 bonus coins
+  [ ] Daily login streak → award 5 coins (×streak multiplier at 7/14/30 days)
+  [ ] On full school completion → award 200 coins
+  All of the above fire from backend routes (not client-side) to prevent
+  manipulation. Create POST /rewards/award endpoint in backend.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5. BACKEND — Complete missing routes & harden existing ones                │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] POST /rewards/award — Awards coins for in-app events with idempotency key
+  [ ] GET  /store/catalog/:childId — Already exists; verify items + balance return
+  [ ] POST /store/buy-item — Already exists; verify coin deduction + ownership set
+  [ ] POST /store/claim-monthly-bonus — Audit idempotency (one per calendar month)
+  [ ] Stripe webhook: handle checkout.session.completed, subscription.deleted
+  [ ] Input validation on all routes (sanitize all user-supplied values)
+  [ ] Rate limiting on auth routes (already in middleware — verify it's active)
+  [ ] Error logging to console.error with enough context to debug in Railway
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  6. DATABASE — Run all migrations on production Supabase                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Run 001_main_schema.sql
+  [ ] Run 002_bot_tables.sql
+  [ ] Run 003_lesson_chapters.sql
+  [ ] Run 003_v2_economy_tables.sql  (wealth_coins_log, weekly_events, virtual_portfolio)
+  [ ] Run 004_school_coins.sql
+  [ ] Run 005_store.sql
+  [ ] Verify all RLS policies allow correct access patterns
+  [ ] Enable Supabase Auth email confirmation (or disable for dev, enable for prod)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  7. UX POLISH — Details that separate good from great                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Coin award animation — brief floating "+25 coins" pop on earn events
+  [ ] Badge award modal (BadgeAwardModal.tsx already exists — wire it up)
+  [ ] Loading skeletons instead of ActivityIndicator on main screens
+  [ ] Pull-to-refresh on LessonHubPane, StoreScreen, ProgressScreen
+  [ ] Empty states on every screen (no schools, no badges, no reports)
+  [ ] Keyboard avoiding on all TextInput forms
+  [ ] Haptic feedback on button presses (Expo Haptics)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8. APP STORE READINESS                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] App icon — 1024×1024px + all required sizes (use Expo's icon generator)
+  [ ] Splash screen — branded, matches dark theme
+  [ ] App Store screenshots — at least 5 per device size (iPhone 15, iPad)
+  [ ] Privacy Policy URL (required for COPPA + App Store)
+  [ ] Terms of Service URL
+  [ ] App Store description + keywords
+  [ ] TestFlight beta — invite 10–20 test families
+  [ ] Fix any crashes found in beta
+  [ ] app.json: version "1.0.0", bundleIdentifier, correct permissions list
+  [ ] EAS Build — configure eas.json for production build
+  [ ] Submit to App Store + Google Play
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  VERSION 2.0  —  THE FULL FINANCIAL WORLD
+  Goal: Turn the app into a complete financial simulation the kid actually
+        wants to open every day. Add the economy layers, social hooks,
+        and AI features that make it sticky.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. SAVINGS VAULT  —  Teach compound interest through experience             │
+└─────────────────────────────────────────────────────────────────────────────┘
+  New screen: SavingsVaultScreen.tsx
+  [ ] Kid locks coins for a chosen term: 7 days (2% bonus) / 30 days (7% bonus)
+        / 90 days (15% bonus)
+  [ ] Visual "vault" with countdown timer and projected payout
+  [ ] On unlock: animated coin shower + log to wealth_coins_log
+  [ ] Can have multiple active vaults simultaneously
+  [ ] DB table: coin_vaults (child_id, amount, rate, locked_until, claimed)
+  [ ] Teaches: delayed gratification, interest rates, opportunity cost
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  2. INVESTMENT SIMULATION EXPANSION  (extends InvestmentScreen.tsx)         │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Portfolio history chart — line chart of portfolio value over time
+        (log a snapshot to virtual_portfolio_history table daily)
+  [ ] Asset detail screen — price history sparkline, description, related lesson
+  [ ] "Why did this change?" — brief AI-generated explanation of price movement
+  [ ] Mutual funds / index funds as a low-risk beginner option
+  [ ] Leaderboard — top 5 portfolios in your "class" (anonymous)
+  [ ] Real market data option for parents (toggle in parent settings)
+        Uses free Alpha Vantage / Yahoo Finance API, not real money
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  3. WEEKLY EVENTS SYSTEM  (uses tables from migration 003)                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Admin seed script to populate weekly_events every Monday automatically
+  [ ] Event types to build out:
+        - TRIVIA: 5-question quiz inside the app, top score earns coins
+        - SAVINGS SPRINT: don't spend coins for 7 days → bonus payout
+        - MARKET CHALLENGE: pick 3 stocks, best performer earns coins
+        - BUDGET BOSS: allocate a fake $1,000 monthly budget correctly
+        - STREAK BOOST: double coins from lessons for 48 hours
+  [ ] Completion tracking via weekly_event_completions table
+  [ ] Push notification: "New weekly event is live! 🎉" every Monday
+  [ ] Event history tab so kids can see past wins + earnings
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  4. AVATAR & CUSTOMIZATION SYSTEM                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+  New screen: AvatarScreen.tsx (accessible from ProfileScreen)
+  [ ] Avatar builder: choose base animal + outfit + background + accessory
+  [ ] Items unlocked by spending coins in the storefront
+  [ ] DB table: avatar_items (item_id, name, emoji/asset, coin_cost, category)
+  [ ] DB table: child_avatar_inventory (child_id, item_id, equipped)
+  [ ] Starter items free; premium cosmetics cost 50–500 coins
+  [ ] Avatar displayed on ProfileScreen, LessonHubPane header, leaderboards
+  [ ] Seasonal items: Halloween theme, Holiday theme, Back-to-School
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  5. BUDGET CALCULATOR TOOL                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+  New screen: BudgetCalculatorScreen.tsx
+  [ ] Kid enters a mock monthly income (or uses real Plaid income if connected)
+  [ ] App guides them through 50/30/20 rule allocation
+        50% Needs / 30% Wants / 20% Savings
+  [ ] Visual pie chart showing their allocation vs recommended
+  [ ] "Grade" their budget (A–F) with tips for improvement
+  [ ] Save budget plans to DB and compare month over month
+  [ ] Completing a budget plan awards 50 coins
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  6. MINI GAMES  —  Learn by playing                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+  New screen: MiniGamesScreen.tsx
+  Each game is a short (2–3 min) interactive lesson disguised as a game.
+  [ ] PRICE IS RIGHT: given a list of monthly expenses, pick the correct total
+  [ ] STOCK PREDICTOR: will this stock go up or down? (5-day challenge)
+  [ ] SCAM OR LEGIT: identify financial scams vs real opportunities
+  [ ] COMPOUND INTEREST RACE: watch two characters' savings grow over 20 years
+        with different interest rates — see compounding visually
+  [ ] Each game awards 25–100 coins on completion
+  [ ] Games gated behind lesson completion (must finish School 1 to unlock Game 1)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  7. AI FINANCIAL COACH  (uses the existing bot-service)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+  bot-service/bot_service.py already exists — extend it:
+  [ ] Chat interface: kid can ask "Why is saving important?" or
+        "What should I do with 500 coins?"
+  [ ] Responses are age-appropriate, encouraging, and educational
+  [ ] Context-aware: knows the kid's current coins, portfolio, progress
+  [ ] Parent can review chat history in parent dashboard
+  [ ] Rate limit: 10 messages/day on free? Actually all messages free with sub
+  [ ] Filter: do not discuss real money products, investments, or give
+        real financial advice — educational perspective only
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  8. SCHOOLS EXPANSION  —  Complete the curriculum                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] School 3: "Credit & Debt" — credit scores, credit cards, loans, interest
+  [ ] School 4: "Investing Fundamentals" — tied directly to InvestmentScreen
+  [ ] School 5: "Entrepreneurship" — business ideas, revenue, profit, expenses
+  [ ] School 6: "Taxes & Government" — why we pay taxes, W-2, refunds (age 13+)
+  [ ] School 7: "Real World Money" — renting vs buying, car payments, insurance
+  Each school unlocks the corresponding investment category in InvestmentScreen
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  9. PUSH NOTIFICATIONS                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Install expo-notifications
+  [ ] Daily streak reminder: "Don't lose your 🔥 {n}-day streak!"
+  [ ] Weekly event live: "New challenge is up — earn 150 coins!"
+  [ ] Savings vault matured: "Your vault unlocked! Collect your coins 💰"
+  [ ] Investment alert: "{symbol} is up 5% today — check your portfolio"
+  [ ] Parent: "Your child completed a new chapter 🎓"
+  [ ] Respect quiet hours (no notifications between 9pm–8am)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  10. PARENT DASHBOARD EXPANSION                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] ParentReportsScreen: charts (not just numbers) — bar chart per school,
+        line chart of coin earnings over time
+  [ ] Spending alerts: notify parent if child's real spending (via Plaid) spikes
+  [ ] Learning goals: parent can set "complete School 2 by end of month"
+        — child sees goal progress bar, earns bonus coins on completion
+  [ ] Allowance scheduler: parent sets weekly virtual coin allowance
+        → auto-deposited every Sunday
+  [ ] Family leaderboard: compare siblings' progress (if multiple children)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  11. MONETIZATION — PARTNER DEALS TAB (Deals tab is already in StoreScreen) │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Curated affiliate deals relevant to parents/teens:
+        - Student bank accounts (Step, Greenlight, Current)
+        - Investing apps for teens (Stockpile, Bloom)
+        - Coding/SAT courses (tangentially financial literacy adjacent)
+  [ ] Each deal card: partner logo, offer description, "Learn More →" link
+  [ ] Revenue model: affiliate commission per click/signup
+  [ ] All deals manually vetted — no predatory financial products
+  [ ] Label all deals clearly as "Sponsored" (FTC compliance)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  12. TECHNICAL DEBT & INFRASTRUCTURE                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [ ] Migrate all remaining light-theme screens to dark theme
+        (SignInScreen, SignUpScreen, WelcomeScreen, parent screens)
+  [ ] Replace all `any` TypeScript types with proper interfaces
+  [ ] Add Sentry or Expo error tracking for crash reports
+  [ ] Add analytics (Expo Analytics / Posthog) — screen views, lesson completion
+        rate, drop-off points — privacy-safe, no personal data
+  [ ] E2E tests for critical paths: sign up → complete lesson → earn coins → buy item
+  [ ] Automated DB backups configured in Supabase
+  [ ] CI/CD: GitHub Actions running TypeScript check + EAS build on merge to main
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PRIORITY ORDER — What to build first
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  V1 — DO THIS FIRST (ship order):
+  1. Seed School 1 + School 2 content (without this, the app has nothing to show)
+  2. Wire coin awards on the backend (lesson complete, quiz pass)
+  3. Complete ProfileScreen dark theme + stats
+  4. Run all DB migrations on production
+  5. TestFlight beta
+  6. Fix beta bugs → App Store submission
+
+  V2 — BUILD IN THIS ORDER (impact vs effort):
+  1. Savings Vault      — high impact, teaches core concept, relatively simple
+  2. Weekly Events      — drives daily retention, tables already exist
+  3. Push Notifications — critical for retention, easy with Expo
+  4. Schools 3–5        — more schools = more reason to stay subscribed
+  5. Budget Calculator  — completes the "earn/spend/save/budget" loop
+  6. Avatar System      — adds fun/personalization, drives store engagement
+  7. Mini Games         — highest effort, highest engagement ceiling
+  8. AI Financial Coach — depends on bot-service being stable
+  9. Investment charts  — nice to have extension of existing feature
+  10. Partner Deals     — revenue upside, lowest development effort
+
+================================================================================
