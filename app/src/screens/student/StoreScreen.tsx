@@ -30,7 +30,14 @@ interface StoreItem {
 function openTool(featureKey: string, navigation: StackNavigationProp<StudentStackParamList>) {
   switch (featureKey) {
     case 'budget_tracker':
-      navigation.navigate('ConnectBank');
+      navigation.navigate('BudgetTracker');
+      break;
+    case 'savings_calculator':
+    case 'savings_goals':
+      navigation.navigate('SavingsCalculator');
+      break;
+    case 'spending_analyzer':
+      navigation.navigate('SpendingAnalyzer');
       break;
     default:
       Alert.alert('Coming Soon 🔨', 'This tool is under development. Check back soon!');

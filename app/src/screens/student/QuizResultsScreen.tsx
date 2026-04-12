@@ -8,7 +8,7 @@ import { RouteProp } from '@react-navigation/native';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import supabase from '../../lib/supabase';
 import useAuthStore, { type AuthState } from '../../store/authStore';
-import { checkAndAwardBadges } from '../../utils/badgeUtils';
+import { checkAndAwardBadges, checkAndAwardPerfectCountBadges } from '../../utils/badgeUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
 
@@ -60,14 +60,37 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
 
     if (passed) {
       // 2. Award graduation badge
-      const badges = await checkAndAwardBadges(childId, 'school_complete', String(schoolId));
-      if (badges.length > 0) setNewBadges(badges);
+      const allBadges: BadgeRecord[] = [];
+      const gradBadges = await checkAndAwardBadges(childId, 'school_complete', String(schoolId));
+      allBadges.push(...gradBadges);
 
-      // 3. Check for 100% badge
+      // 3. Check all_schools_complete — fire if child has passed all known schools
+      const { count: schoolCount } = await supabase
+        .from('schools')
+        .select('*', { count: 'exact', head: true });
+      const { count: passedCount } = await supabase
+        .from('quiz_attempts')
+        .select('school_id')
+        .eq('child_id', childId)
+        .eq('passed', true);
+      const distinctPassed = new Set(
+        ((await supabase.from('quiz_attempts').select('school_id').eq('child_id', childId).eq('passed', true)).data ?? [])
+          .map((r: any) => r.school_id)
+      ).size;
+      if (distinctPassed >= (schoolCount ?? Infinity)) {
+        const allSchoolBadges = await checkAndAwardBadges(childId, 'all_schools_complete');
+        allBadges.push(...allSchoolBadges);
+      }
+
+      // 4. Check for 100% badges (single + count milestones)
       if (score === 100) {
         const perfBadges = await checkAndAwardBadges(childId, 'quiz_perfect');
-        if (perfBadges.length > 0) setNewBadges((prev: BadgeRecord[]) => [...prev, ...perfBadges]);
+        allBadges.push(...perfBadges);
+        const countBadges = await checkAndAwardPerfectCountBadges(childId);
+        allBadges.push(...countBadges);
       }
+
+      if (allBadges.length > 0) setNewBadges(allBadges);
     }
   };
 

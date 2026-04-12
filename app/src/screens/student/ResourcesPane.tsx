@@ -27,6 +27,11 @@ const TOOLS: Tool[] = [
     go: (nav) => nav.navigate('SpendingReports'),
   },
   {
+    id: 'analyzer', emoji: '🔍', label: 'Spending Analyzer', desc: '6-month deep dive',
+    bg: '#1A2A4E',
+    go: (nav) => nav.navigate('SpendingAnalyzer'),
+  },
+  {
     id: 'progress', emoji: '🏆', label: 'My Progress', desc: 'Lessons & achievements',
     bg: '#0D3D28',
     go: (nav) => nav.navigate('Progress'),
@@ -42,16 +47,18 @@ const TOOLS: Tool[] = [
     go: (nav) => nav.navigate('Profile'),
   },
   {
-    id: 'budget', emoji: '🧮', label: 'Budget Calculator', desc: 'Plan your spending',
-    bg: 'rgba(255,255,255,0.05)', soon: true,
+    id: 'budget', emoji: '🧮', label: 'Budget Tracker', desc: 'Track real money & coins',
+    bg: '#2A1A5E',
+    go: (nav) => nav.navigate('BudgetTracker'),
   },
   {
     id: 'bot', emoji: '🤖', label: 'Trading Bot', desc: 'Auto trading strategies',
     bg: 'rgba(255,255,255,0.05)', soon: true,
   },
   {
-    id: 'goals', emoji: '🎯', label: 'Savings Goals', desc: 'Track your targets',
-    bg: 'rgba(255,255,255,0.05)', soon: true,
+    id: 'goals', emoji: '🎯', label: 'Savings Calculator', desc: 'Plan goals & grow money',
+    bg: '#0D3D28',
+    go: (nav) => nav.navigate('SavingsCalculator'),
   },
   {
     id: 'library', emoji: '📚', label: 'Resource Library', desc: 'Guides & articles',

@@ -35,6 +35,17 @@
    supabase/migrations/005_store.sql           ← adds coin_packs, store_items,
                                                   item_purchases, coin_pack_purchases,
                                                   monthly_bonus_log
+   supabase/migrations/006_school2_banking_101.sql ← School 2 "Banking 101" full content
+                                                       (7 lessons + 21 quiz questions)
+                                                       upsert-safe: safe to re-run
+   supabase/migrations/007_budget_tracker_rls.sql  ← RLS policy fixes for Budget Tracker
+                                                      (parent INSERT on budget_entries,
+                                                       parent SELECT on coin_transactions)
+   supabase/migrations/008_badge_definitions.sql   ← 41 badge definitions (8 categories),
+                                                      fixes student_badges_write RLS policy
+                                                      (parent-session subquery), UNIQUE
+                                                      constraint on badges.name.
+                                                      Safe to re-run (ON CONFLICT DO NOTHING)
 
  Auth settings to enable:
    Authentication → Providers → Email: ON
@@ -305,11 +316,84 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 9. QUICK CHECKLIST — "IS EVERYTHING CONNECTED?"
+ 9. CONTENT SEEDING — MANUAL TASKS
+    (run in Supabase SQL Editor after the standard migrations)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ SCHOOL 1 — "Money Fundamentals"  (seeded by 001_main_schema.sql + 003_lesson_chapters.sql)
+   Automatically included in the standard migration sequence.
+   No extra manual steps required.
+
+   Verify:
+     SELECT COUNT(*) FROM lessons WHERE school_id = 1;         -- expect 7
+     SELECT COUNT(*) FROM quiz_questions WHERE school_id = 1;  -- expect 21
+
+
+ SCHOOL 2 — "Banking 101"  (seeded by 006_school2_banking_101.sql)
+   Run migration 006 in the Supabase SQL Editor:
+     Dashboard → SQL Editor → paste 006_school2_banking_101.sql → Run
+
+   What gets created / updated:
+     • schools row id=2  (upsert — updates title/description/icon/premium/min_age
+                          if the placeholder row from 001 already exists)
+     • 7 lessons for school_id=2  (lesson_number 1–7)
+       1. Checking vs Savings – Two Accounts, Two Jobs
+       2. How Interest Works – Your Money Making Money
+       3. Debit Cards and Transactions – How Money Actually Moves
+       4. Overdraft and Negative Balances – The $35 Trap
+       5. Bank Fees You Can Avoid – The Hidden Costs
+       6. Safe Banking Habits – Protecting Your Money Like a Pro
+       7. Build Your First Banking System – Money on Autopilot
+     • Rich sections JSONB on all 7 lessons
+       (types: hook / body / realcheck / mathbreak / wywd / reflect)
+     • 21 quiz questions (3 per lesson) linked via lesson_id subquery
+
+   Re-run safety:
+     The migration deletes and re-inserts all School 2 lessons + quiz questions
+     before inserting, so it is safe to run multiple times without duplicates.
+     The schools upsert uses ON CONFLICT (id) DO UPDATE.
+
+   Verify after running (paste into SQL Editor to confirm):
+     -- School 2 metadata
+     SELECT id, title, order_number, is_premium, min_age FROM schools WHERE id = 2;
+
+     -- Lesson count (expect 7)
+     SELECT COUNT(*) AS lesson_count FROM lessons WHERE school_id = 2;
+
+     -- All lessons have sections JSONB (expect has_sections = true on all 7 rows)
+     SELECT lesson_number, title, (sections IS NOT NULL) AS has_sections
+     FROM lessons WHERE school_id = 2 ORDER BY lesson_number;
+
+     -- Quiz question count (expect 21)
+     SELECT COUNT(*) AS question_count FROM quiz_questions WHERE school_id = 2;
+
+     -- 3 questions per lesson (expect 3 on every row)
+     SELECT l.lesson_number, l.title, COUNT(q.id) AS question_count
+     FROM lessons l
+     LEFT JOIN quiz_questions q ON q.lesson_id = l.id
+     WHERE l.school_id = 2
+     GROUP BY l.lesson_number, l.title
+     ORDER BY l.lesson_number;
+
+     -- No orphaned questions (expect 0)
+     SELECT COUNT(*) AS orphaned FROM quiz_questions
+     WHERE school_id = 2 AND lesson_id IS NULL;
+
+   Premium gate:
+     School 2 is is_premium = TRUE.
+     Students need an active subscription or the app will show the upgrade paywall.
+     To temporarily unlock for testing change:
+       UPDATE schools SET is_premium = FALSE WHERE id = 2;
+     Revert before going live:
+       UPDATE schools SET is_premium = TRUE WHERE id = 2;
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 10. QUICK CHECKLIST — "IS EVERYTHING CONNECTED?"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
  Supabase
-   [ ] All 5 migrations run (001 → 005)
+   [ ] All 8 migrations run (001 → 008)
    [ ] SUPABASE_URL set in Railway
    [ ] SUPABASE_SERVICE_ROLE_KEY set in Railway
    [ ] EXPO_PUBLIC_SUPABASE_URL set in app/.env and EAS secrets
@@ -347,7 +431,7 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 10. COST SUMMARY  (when fully live)
+ 11. COST SUMMARY  (when fully live)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
  Service            Cost

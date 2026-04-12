@@ -8,7 +8,7 @@ import { RouteProp } from '@react-navigation/native';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
-import { checkAndAwardBadges } from '../../utils/badgeUtils';
+import { checkAndAwardBadges, checkAndAwardLessonBadges, checkAndAwardStreakBadges, checkAndAwardPerfectCountBadges } from '../../utils/badgeUtils';
 import { updateStreak } from '../../utils/streakUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';

@@ -9,7 +9,10 @@ import QuizScreen           from '../screens/student/QuizScreen';
 import QuizResultsScreen    from '../screens/student/QuizResultsScreen';
 import SpendingReportsScreen from '../screens/student/SpendingReportsScreen';
 import ConnectBankScreen    from '../screens/student/ConnectBankScreen';
-import UpgradeScreen        from '../screens/paywall/UpgradeScreen';
+import BudgetTrackerScreen       from '../screens/student/BudgetTrackerScreen';
+import SavingsCalculatorScreen   from '../screens/student/SavingsCalculatorScreen';
+import SpendingAnalyzerScreen    from '../screens/student/SpendingAnalyzerScreen';
+import UpgradeScreen             from '../screens/paywall/UpgradeScreen';
 import ProfileScreen        from '../screens/student/ProfileScreen';
 import ProgressScreen       from '../screens/student/ProgressScreen';
 
@@ -36,7 +39,10 @@ export type StudentStackParamList = {
   };
   SpendingReports: undefined;
   ConnectBank:     undefined;
-  Upgrade:         undefined;
+  BudgetTracker:        undefined;
+  SavingsCalculator:    undefined;
+  SpendingAnalyzer:     undefined;
+  Upgrade:              undefined;
   Profile:         undefined;
   Progress:        undefined;
 };
@@ -54,7 +60,10 @@ export default function StudentNavigator() {
       <Stack.Screen name="QuizResults"     component={QuizResultsScreen} />
       <Stack.Screen name="SpendingReports" component={SpendingReportsScreen} />
       <Stack.Screen name="ConnectBank"     component={ConnectBankScreen} />
-      <Stack.Screen name="Upgrade"         component={UpgradeScreen} />
+      <Stack.Screen name="BudgetTracker"       component={BudgetTrackerScreen} />
+      <Stack.Screen name="SavingsCalculator"    component={SavingsCalculatorScreen} />
+      <Stack.Screen name="SpendingAnalyzer"     component={SpendingAnalyzerScreen} />
+      <Stack.Screen name="Upgrade"              component={UpgradeScreen} />
       <Stack.Screen name="Profile"         component={ProfileScreen} />
       <Stack.Screen name="Progress"        component={ProgressScreen} />
     </Stack.Navigator>
