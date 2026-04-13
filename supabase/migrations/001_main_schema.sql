@@ -1,7 +1,60 @@
 -- ============================================================
 -- WealthWise Kids — Main Schema  (17 tables + RLS + seed data)
--- Run in Supabase SQL Editor BEFORE 002_bot_tables.sql
 -- ============================================================
+
+-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  -- profiles
+  DROP POLICY IF EXISTS "profiles_own" ON profiles;
+  -- child_profiles
+  DROP POLICY IF EXISTS "child_profiles_parent" ON child_profiles;
+  DROP POLICY IF EXISTS "child_profiles_self" ON child_profiles;
+  -- parental_consents
+  DROP POLICY IF EXISTS "consents_parent" ON parental_consents;
+  -- subscriptions
+  DROP POLICY IF EXISTS "subscriptions_own" ON subscriptions;
+  -- schools
+  DROP POLICY IF EXISTS "schools_public_read" ON schools;
+  -- lessons
+  DROP POLICY IF EXISTS "lessons_public_read" ON lessons;
+  -- quiz_questions
+  DROP POLICY IF EXISTS "quiz_public_read" ON quiz_questions;
+  -- student_progress
+  DROP POLICY IF EXISTS "progress_child" ON student_progress;
+  DROP POLICY IF EXISTS "progress_parent" ON student_progress;
+  DROP POLICY IF EXISTS "progress_child_write" ON student_progress;
+  DROP POLICY IF EXISTS "progress_child_update" ON student_progress;
+  -- quiz_attempts
+  DROP POLICY IF EXISTS "attempts_child" ON quiz_attempts;
+  DROP POLICY IF EXISTS "attempts_parent" ON quiz_attempts;
+  DROP POLICY IF EXISTS "attempts_child_write" ON quiz_attempts;
+  -- badges
+  DROP POLICY IF EXISTS "badges_public_read" ON badges;
+  -- student_badges
+  DROP POLICY IF EXISTS "student_badges_child" ON student_badges;
+  DROP POLICY IF EXISTS "student_badges_parent" ON student_badges;
+  DROP POLICY IF EXISTS "student_badges_write" ON student_badges;
+  -- wealth_coins
+  DROP POLICY IF EXISTS "coins_child" ON wealth_coins;
+  DROP POLICY IF EXISTS "coins_parent" ON wealth_coins;
+  DROP POLICY IF EXISTS "coins_child_write" ON wealth_coins;
+  -- coin_transactions
+  DROP POLICY IF EXISTS "coin_tx_child" ON coin_transactions;
+  DROP POLICY IF EXISTS "coin_tx_write" ON coin_transactions;
+  -- streaks
+  DROP POLICY IF EXISTS "streaks_child" ON streaks;
+  DROP POLICY IF EXISTS "streaks_parent" ON streaks;
+  DROP POLICY IF EXISTS "streaks_write" ON streaks;
+  -- budget_entries
+  DROP POLICY IF EXISTS "budget_child" ON budget_entries;
+  DROP POLICY IF EXISTS "budget_parent" ON budget_entries;
+  -- plaid_connections
+  DROP POLICY IF EXISTS "plaid_parent_only" ON plaid_connections;
+  -- saving_goals
+  DROP POLICY IF EXISTS "goals_child" ON saving_goals;
+  DROP POLICY IF EXISTS "goals_parent" ON saving_goals;
+EXCEPTION WHEN OTHERS THEN NULL; -- tables may not exist yet, that's fine
+END $$;
 
 -- ─── 1. profiles ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS profiles (
