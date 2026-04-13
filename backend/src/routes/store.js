@@ -1,7 +1,8 @@
-const express = require('express');
-const router  = express.Router();
-const Stripe  = require('stripe');
+const express  = require('express');
+const router   = express.Router();
+const Stripe   = require('stripe');
 const { supabase } = require('../server');
+const { isUUID, isPosInt, validateBody, validateUUIDParam } = require('../middleware/validate');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -46,7 +47,7 @@ async function verifyParentOwnsChild(userId, childId, res) {
  * Auth: Bearer <supabase_jwt>
  * Returns: { balance, items: StoreItem[], packs: CoinPack[] }
  */
-router.get('/catalog/:child_id', async (req, res) => {
+router.get('/catalog/:child_id', validateUUIDParam('child_id'), async (req, res) => {
   const user = await authenticate(req, res);
   if (!user) return;
 
@@ -60,6 +61,11 @@ router.get('/catalog/:child_id', async (req, res) => {
     supabase.from('wealth_coins').select('balance').eq('child_id', child_id).maybeSingle(),
     supabase.from('item_purchases').select('item_id').eq('child_id', child_id),
   ]);
+
+  if (itemsRes.error) {
+    console.error('[store/catalog] store_items fetch error', { child_id, error: itemsRes.error.message });
+    return res.status(500).json({ error: 'Failed to load catalog.' });
+  }
 
   const ownedIds = new Set((ownedRes.data ?? []).map((r) => r.item_id));
   const items = (itemsRes.data ?? []).map((item) => ({
@@ -90,12 +96,11 @@ router.post('/buy-item', async (req, res) => {
   if (!user) return;
 
   const { child_id, item_id } = req.body;
-  if (!child_id || item_id == null) {
-    return res.status(400).json({ error: 'child_id and item_id are required.' });
-  }
-  if (!Number.isInteger(item_id) || item_id < 1) {
-    return res.status(400).json({ error: 'Invalid item_id.' });
-  }
+  const validErr = validateBody(req.body, [
+    { field: 'child_id', type: 'uuid' },
+    { field: 'item_id',  type: 'posInt' },
+  ]);
+  if (validErr) return res.status(400).json({ error: validErr });
 
   const ok = await verifyParentOwnsChild(user.id, child_id, res);
   if (!ok) return;
@@ -145,7 +150,7 @@ router.post('/buy-item', async (req, res) => {
     );
 
   if (walletErr) {
-    console.error('Wallet deduction error:', walletErr);
+    console.error('[store/buy-item] wallet deduction error', { child_id, item_id, error: walletErr.message });
     return res.status(500).json({ error: 'Failed to deduct coins.' });
   }
 
@@ -175,7 +180,9 @@ router.post('/buy-item', async (req, res) => {
       amount: item.coin_cost,
       reason: `Rolled back: failed purchase of ${item.name}`,
     });
-    console.error('Item purchase insert error:', purchaseErr);
+    console.error('[store/buy-item] purchase insert error — coins rolled back', {
+      child_id, item_id, item_name: item.name, error: purchaseErr.message, code: purchaseErr.code,
+    });
     return res.status(500).json({ error: 'Failed to record purchase — coins refunded.' });
   }
 
@@ -197,8 +204,19 @@ router.post('/buy-coins', async (req, res) => {
   if (!user) return;
 
   const { child_id, pack_id, success_url, cancel_url } = req.body;
-  if (!child_id || pack_id == null) {
-    return res.status(400).json({ error: 'child_id and pack_id are required.' });
+  const validErr = validateBody(req.body, [
+    { field: 'child_id', type: 'uuid' },
+    { field: 'pack_id',  type: 'posInt' },
+  ]);
+  if (validErr) return res.status(400).json({ error: validErr });
+
+  // Reject unexpected URL shapes to prevent open-redirect abuse
+  const URL_RE = /^https?:\/\//;
+  if (success_url && !URL_RE.test(success_url)) {
+    return res.status(400).json({ error: 'success_url must be a valid URL.' });
+  }
+  if (cancel_url && !URL_RE.test(cancel_url)) {
+    return res.status(400).json({ error: 'cancel_url must be a valid URL.' });
   }
 
   const ok = await verifyParentOwnsChild(user.id, child_id, res);
@@ -259,7 +277,9 @@ router.post('/buy-coins', async (req, res) => {
 
     res.json({ url: session.url, session_id: session.id });
   } catch (err) {
-    console.error('Stripe checkout error (coins):', err);
+    console.error('[store/buy-coins] Stripe checkout error', {
+      user_id: user.id, child_id, pack_id, error: err.message,
+    });
     res.status(500).json({ error: 'Failed to create checkout session.' });
   }
 });
@@ -277,11 +297,16 @@ router.post('/coins-webhook', async (req, res) => {
   const sig    = req.headers['stripe-signature'];
   const secret = process.env.STRIPE_COINS_WEBHOOK_SECRET;
 
+  if (!secret) {
+    console.error('[store/coins-webhook] STRIPE_COINS_WEBHOOK_SECRET is not set');
+    return res.status(500).json({ error: 'Webhook secret not configured.' });
+  }
+
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, secret);
   } catch (err) {
-    console.error('Coins webhook signature invalid:', err.message);
+    console.error('[store/coins-webhook] signature invalid', { error: err.message });
     return res.status(400).json({ error: 'Webhook signature invalid.' });
   }
 
@@ -361,7 +386,9 @@ router.post('/claim-monthly-bonus', async (req, res) => {
   if (!user) return;
 
   const { child_id } = req.body;
-  if (!child_id) return res.status(400).json({ error: 'child_id is required.' });
+  if (!isUUID(child_id)) {
+    return res.status(400).json({ error: 'child_id must be a valid UUID.' });
+  }
 
   const ok = await verifyParentOwnsChild(user.id, child_id, res);
   if (!ok) return;
@@ -390,8 +417,14 @@ router.post('/claim-monthly-bonus', async (req, res) => {
     .insert({ child_id, month_key });
 
   if (insertErr) {
-    // Unique violation → already claimed this month
-    return res.json({ coins_awarded: 0, already_claimed: true, month_key });
+    if (insertErr.code === '23505') {
+      // Unique violation → already claimed this month
+      return res.json({ coins_awarded: 0, already_claimed: true, month_key });
+    }
+    console.error('[store/claim-monthly-bonus] insert error', {
+      child_id, month_key, error: insertErr.message, code: insertErr.code,
+    });
+    return res.status(500).json({ error: 'Failed to record bonus claim.' });
   }
 
   const BONUS = 150;

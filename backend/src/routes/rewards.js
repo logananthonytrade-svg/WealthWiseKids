@@ -1,6 +1,7 @@
-const express = require('express');
-const router  = express.Router();
+const express  = require('express');
+const router   = express.Router();
 const { supabase } = require('../server');
+const { isUUID } = require('../middleware/validate');
 
 // ─── Streak multiplier table ──────────────────────────────────
 // 7-day streak = 2x, 14-day = 3x, 30-day = 5x, otherwise 1x.
@@ -69,6 +70,9 @@ router.post('/award', async (req, res) => {
 
   if (!child_id || typeof child_id !== 'string') {
     return res.status(400).json({ error: 'child_id is required.' });
+  }
+  if (!isUUID(child_id)) {
+    return res.status(400).json({ error: 'child_id must be a valid UUID.' });
   }
   if (!event_type || !VALID_EVENTS.includes(event_type)) {
     return res.status(400).json({
@@ -206,7 +210,10 @@ router.post('/award', async (req, res) => {
         already_claimed: true,
       });
     }
-    console.error('[rewards/award] claim insert error:', claimErr);
+    console.error('[rewards/award] claim insert error', {
+      child_id, event_type, reward_key: rewardKey,
+      error: claimErr.message, code: claimErr.code,
+    });
     return res.status(500).json({ error: 'Failed to record reward claim.' });
   }
 
@@ -216,7 +223,9 @@ router.post('/award', async (req, res) => {
     .insert({ child_id, amount: coinsToGrant, reason: rewardKey });
 
   if (txErr) {
-    console.error('[rewards/award] coin_transactions insert error:', txErr);
+    console.error('[rewards/award] coin_transactions insert error', {
+      child_id, event_type, coins: coinsToGrant, error: txErr.message,
+    });
     // Non-fatal — claim is already recorded; continue to credit balance
   }
 
@@ -237,7 +246,9 @@ router.post('/award', async (req, res) => {
     );
 
   if (balanceErr) {
-    console.error('[rewards/award] wealth_coins upsert error:', balanceErr);
+    console.error('[rewards/award] wealth_coins upsert error', {
+      child_id, event_type, coins: coinsToGrant, error: balanceErr.message,
+    });
     return res.status(500).json({ error: 'Failed to update coin balance.' });
   }
 

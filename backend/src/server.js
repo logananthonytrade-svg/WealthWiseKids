@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
+const cors    = require('cors');
+const helmet  = require('helmet');
 const { createClient } = require('@supabase/supabase-js');
+const { authLimiter, rewardLimiter, storeLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
@@ -25,17 +26,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
 
-// ─── Routes ───────────────────────────────────────────────────────────────
-app.use('/auth',          require('./routes/auth'));
-app.use('/subscriptions', require('./routes/subscriptions'));
-app.use('/schools',       require('./routes/schools'));
-app.use('/rewards',       require('./routes/rewards'));
-app.use('/store',         require('./routes/store'));
-app.use('/trading',       require('./routes/trading'));
+// ─── Routes (with rate limiters) ──────────────────────────────────────────
+app.use('/auth',          authLimiter,   require('./routes/auth'));
+app.use('/subscriptions', authLimiter,   require('./routes/subscriptions'));
+app.use('/schools',                      require('./routes/schools'));
+app.use('/rewards',       rewardLimiter, require('./routes/rewards'));
+app.use('/store',         storeLimiter,  require('./routes/store'));
+app.use('/trading',                      require('./routes/trading'));
 
 // ─── Error handler ────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('[server] unhandled error', {
+    method: req.method, path: req.path, error: err.message, stack: err.stack,
+  });
   res.status(500).json({ error: 'Internal server error' });
 });
 
