@@ -84,11 +84,6 @@
    STRIPE_COINS_WEBHOOK_SECRET     = whsec_...    (from coin pack webhook endpoint —
                                                     DIFFERENT secret to the one above)
 
-   # Plaid
-   PLAID_CLIENT_ID                 = your Plaid client ID
-   PLAID_SECRET                    = your Plaid secret (sandbox or production)
-   PLAID_ENV                       = sandbox  (change to "production" when going live)
-
    # App
    APP_URL                         = https://wealthwisekids.app
                                      (used for Stripe success/cancel redirect URLs)
@@ -153,47 +148,12 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 4. PLAID  (bank account connection)
-    https://dashboard.plaid.com
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
- Where to find your keys:
-   Plaid Dashboard → Team Settings → Keys
-
- Keys needed (go into Railway environment variables):
-   PLAID_CLIENT_ID  = your client ID
-   PLAID_SECRET     = your sandbox secret  (use "sandbox" secret in dev,
-                                             "production" secret when live)
-   PLAID_ENV        = sandbox  (or "production" when going live)
-
- Products to enable in Plaid Dashboard:
-   Transactions
-   Auth
-   Identity (optional — for account owner verification)
-
- Redirect URIs (add in Plaid Dashboard → API):
-   wealthwisekids://plaid-redirect   (matches the app scheme in app.json)
-
- Plaid environment flow:
-   sandbox    = fake bank logins, use for all testing
-   development = real bank logins, limited connections, free
-   production  = real bank logins, per-connection billing, requires Plaid approval
-
- NOTE: When you go to production, Plaid requires a compliance review.
- Start that process early — it can take 2–4 weeks.
-
- The token stored in Supabase is currently base64-encoded (light obfuscation).
- Before going to production, upgrade backend/src/routes/plaid.js to use
- AES-256 encryption (there is a comment marking the line to change).
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 5. EXPO / EAS  (mobile app build & publish)
+ 4. EXPO / EAS  (mobile app build & publish)
     https://expo.dev
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
  The app cannot run on plain Expo Go because it uses native modules:
-   expo-secure-store, expo-notifications, Stripe SDK, Plaid Link
+   expo-secure-store, expo-notifications, Stripe SDK
  You MUST use an EAS Development Build for device testing.
 
  SETUP STEPS:
@@ -237,7 +197,7 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 6. GITHUB  (code storage + deployment trigger)
+ 5. GITHUB  (code storage + deployment trigger)
     https://github.com
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -254,7 +214,7 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 7. BOT SERVICE  (AI paper trading bot)
+ 6. BOT SERVICE  (AI paper trading bot)
     bot-service/bot_service.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -274,7 +234,7 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 8. LOCAL DEVELOPMENT SETUP
+ 7. LOCAL DEVELOPMENT SETUP
     (what to do when working on the app on your machine)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -293,9 +253,6 @@
    STRIPE_PRICE_PREMIUM_YEARLY=price_...
    STRIPE_PRICE_FAMILY_MONTHLY=price_...
    STRIPE_PRICE_FAMILY_YEARLY=price_...
-   PLAID_CLIENT_ID=...
-   PLAID_SECRET=...
-   PLAID_ENV=sandbox
    APP_URL=http://localhost:3001
    PORT=3001
 
@@ -316,7 +273,7 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 9. CONTENT SEEDING — MANUAL TASKS
+ 8. CONTENT SEEDING — MANUAL TASKS
     (run in Supabase SQL Editor after the standard migrations)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -389,7 +346,7 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 10. QUICK CHECKLIST — "IS EVERYTHING CONNECTED?"
+ 9. QUICK CHECKLIST — "IS EVERYTHING CONNECTED?"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
  Supabase
@@ -408,11 +365,6 @@
    [ ] Coin pack webhook endpoint registered (separate from subscriptions)
    [ ] STRIPE_COINS_WEBHOOK_SECRET set in Railway vars
    [ ] STRIPE_SECRET_KEY set in Railway vars
-
- Plaid
-   [ ] PLAID_CLIENT_ID + PLAID_SECRET set in Railway
-   [ ] PLAID_ENV=sandbox (or production)
-   [ ] Redirect URI added in Plaid Dashboard
 
  Railway
    [ ] Repo connected and autodeploy on main enabled

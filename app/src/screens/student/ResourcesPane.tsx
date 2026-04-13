@@ -37,11 +37,6 @@ const TOOLS: Tool[] = [
     go: (nav) => nav.navigate('Progress'),
   },
   {
-    id: 'bank', emoji: '🏦', label: 'Connect Bank', desc: 'Link your accounts',
-    bg: '#2A0D5E',
-    go: (nav) => nav.navigate('ConnectBank'),
-  },
-  {
     id: 'profile', emoji: '👤', label: 'My Profile', desc: 'Edit your details',
     bg: '#0D2A5E',
     go: (nav) => nav.navigate('Profile'),

@@ -1,0 +1,6 @@
+<svg viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="70" r="56" fill="rgba(27,58,107,0.08)"/>
+  <text x="100" y="85" text-anchor="middle" font-size="52">📚</text>
+  <text x="100" y="128" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="16" fill="#888" font-weight="600">No lessons yet</text>
+  <text x="100" y="148" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="12" fill="#bbb">Start School 1 to begin</text>
+</svg>

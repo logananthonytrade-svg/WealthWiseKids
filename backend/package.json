@@ -11,8 +11,7 @@
     "dotenv": "^16.4.0",
     "helmet": "^7.1.0",
     "@supabase/supabase-js": "^2.39.0",
-    "stripe": "^14.14.0",
-    "plaid": "^19.0.0"
+    "stripe": "^14.14.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"

@@ -8,7 +8,6 @@ import QuizIntroScreen      from '../screens/student/QuizIntroScreen';
 import QuizScreen           from '../screens/student/QuizScreen';
 import QuizResultsScreen    from '../screens/student/QuizResultsScreen';
 import SpendingReportsScreen from '../screens/student/SpendingReportsScreen';
-import ConnectBankScreen    from '../screens/student/ConnectBankScreen';
 import BudgetTrackerScreen       from '../screens/student/BudgetTrackerScreen';
 import SavingsCalculatorScreen   from '../screens/student/SavingsCalculatorScreen';
 import SpendingAnalyzerScreen    from '../screens/student/SpendingAnalyzerScreen';
@@ -38,7 +37,6 @@ export type StudentStackParamList = {
     answers:   Array<{ questionId: string; selectedAnswer: string; wasCorrect: boolean }>;
   };
   SpendingReports: undefined;
-  ConnectBank:     undefined;
   BudgetTracker:        undefined;
   SavingsCalculator:    undefined;
   SpendingAnalyzer:     undefined;
@@ -59,7 +57,6 @@ export default function StudentNavigator() {
       <Stack.Screen name="Quiz"            component={QuizScreen} />
       <Stack.Screen name="QuizResults"     component={QuizResultsScreen} />
       <Stack.Screen name="SpendingReports" component={SpendingReportsScreen} />
-      <Stack.Screen name="ConnectBank"     component={ConnectBankScreen} />
       <Stack.Screen name="BudgetTracker"       component={BudgetTrackerScreen} />
       <Stack.Screen name="SavingsCalculator"    component={SavingsCalculatorScreen} />
       <Stack.Screen name="SpendingAnalyzer"     component={SpendingAnalyzerScreen} />

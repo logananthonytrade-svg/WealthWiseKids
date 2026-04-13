@@ -204,8 +204,7 @@ export async function checkAndAwardBudgetEntryBadges(
   const { count } = await supabase
     .from('budget_entries')
     .select('*', { count: 'exact', head: true })
-    .eq('child_id', childId)
-    .eq('is_from_plaid', false);
+    .eq('child_id', childId);
 
   const total = count ?? 0;
   const crossed = BUDGET_MILESTONES.filter((m) => total >= m);
@@ -238,8 +237,7 @@ export async function checkAndAwardSavingsEntryBadges(
     .from('budget_entries')
     .select('*', { count: 'exact', head: true })
     .eq('child_id', childId)
-    .eq('category', 'savings')
-    .eq('is_from_plaid', false);
+    .eq('category', 'savings');
 
   const total = count ?? 0;
   const crossed = SAVINGS_MILESTONES.filter((m) => total >= m);

@@ -1,0 +1,25 @@
+<svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gcelebrate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1B3A6B"/>
+      <stop offset="50%" stop-color="#0D3B26"/>
+      <stop offset="100%" stop-color="#1B3A6B"/>
+    </linearGradient>
+  </defs>
+  <rect width="390" height="844" fill="url(#gcelebrate)"/>
+  <circle cx="195" cy="200" r="280" fill="rgba(240,165,0,0.06)"/>
+  <circle cx="195" cy="200" r="180" fill="rgba(240,165,0,0.06)"/>
+  <circle cx="195" cy="200" r="80" fill="rgba(240,165,0,0.04)"/>
+  <!-- Confetti dots -->
+  <circle cx="60" cy="100" r="5" fill="#F5C518" opacity="0.7"/>
+  <circle cx="320" cy="80" r="4" fill="#27AE60" opacity="0.7"/>
+  <circle cx="140" cy="180" r="4" fill="#F5C518" opacity="0.5"/>
+  <circle cx="280" cy="160" r="5" fill="#fff" opacity="0.4"/>
+  <circle cx="50" cy="250" r="4" fill="#27AE60" opacity="0.6"/>
+  <circle cx="340" cy="300" r="4" fill="#F5C518" opacity="0.5"/>
+  <circle cx="80" cy="500" r="3" fill="#F5C518" opacity="0.4"/>
+  <circle cx="360" cy="450" r="5" fill="#27AE60" opacity="0.5"/>
+  <circle cx="200" cy="650" r="4" fill="#F5C518" opacity="0.3"/>
+  <circle cx="30" cy="700" r="3" fill="#fff" opacity="0.3"/>
+  <circle cx="370" cy="750" r="4" fill="#27AE60" opacity="0.4"/>
+</svg>

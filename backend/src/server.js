@@ -30,7 +30,6 @@ app.use('/auth',          require('./routes/auth'));
 app.use('/subscriptions', require('./routes/subscriptions'));
 app.use('/schools',       require('./routes/schools'));
 app.use('/store',         require('./routes/store'));
-app.use('/plaid',         require('./routes/plaid'));
 app.use('/trading',       require('./routes/trading'));
 
 // ─── Error handler ────────────────────────────────────────────────────────

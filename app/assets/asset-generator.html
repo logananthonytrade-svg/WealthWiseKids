@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WealthWise Kids — Asset Generator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e1a;
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 40px 24px;
+  }
+  h1 { font-size: 28px; font-weight: 800; color: #F5C518; margin-bottom: 6px; }
+  .subtitle { color: rgba(255,255,255,0.55); font-size: 14px; margin-bottom: 40px; }
+  .section { margin-bottom: 56px; }
+  .section-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 2px; color: rgba(255,255,255,0.4);
+    margin-bottom: 20px; padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .asset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+  .asset-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .asset-preview {
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; min-height: 200px;
+    background: rgba(0,0,0,0.3);
+  }
+  .asset-info { padding: 16px 20px; }
+  .asset-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .asset-spec { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
+  .dl-btn {
+    display: inline-block; padding: 9px 20px;
+    background: #F5C518; color: #000;
+    border: none; border-radius: 8px;
+    font-size: 12px; font-weight: 800;
+    cursor: pointer; text-transform: uppercase;
+    letter-spacing: 0.5px; transition: opacity 0.15s;
+  }
+  .dl-btn:hover { opacity: 0.85; }
+  .dl-btn.secondary {
+    background: rgba(255,255,255,0.1); color: #fff; margin-left: 8px;
+  }
+  canvas { border-radius: 8px; max-width: 100%; height: auto; }
+  svg { max-width: 100%; height: auto; }
+
+  .instructions {
+    background: rgba(245,197,24,0.08);
+    border: 1px solid rgba(245,197,24,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+  }
+  .instructions h2 { font-size: 14px; font-weight: 700; color: #F5C518; margin-bottom: 10px; }
+  .instructions ol { padding-left: 18px; }
+  .instructions li { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 6px; line-height: 1.5; }
+  code {
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px; padding: 2px 6px;
+    font-family: monospace; font-size: 12px;
+    color: #F5C518;
+  }
+</style>
+</head>
+<body>
+
+<h1>🎨 WealthWise Kids — Visual Assets</h1>
+<p class="subtitle">Click any Download button to save as PNG. Drop files into your <code>app/assets/</code> folder.</p>
+
+<div class="instructions">
+  <h2>📁 Where Each File Goes</h2>
+  <ol>
+    <li><strong>icon.png</strong> → <code>app/assets/icon.png</code> (1024×1024, required for App Store)</li>
+    <li><strong>splash.png</strong> → <code>app/assets/splash.png</code> (1284×2778, used on startup)</li>
+    <li><strong>adaptive-icon.png</strong> → <code>app/assets/adaptive-icon.png</code> (Android only, foreground layer)</li>
+    <li><strong>favicon.png</strong> → <code>app/assets/favicon.png</code> (web/PWA use, 48×48)</li>
+    <li>All background SVGs → <code>app/src/assets/backgrounds/</code> (import in screens as needed)</li>
+  </ol>
+</div>
+
+<div class="section">
+  <div class="section-title">App Icons</div>
+  <div class="asset-grid">
+
+    <div class="asset-card">
+      <div class="asset-preview">
+        <canvas id="icon-main" width="200" height="200" style="border-radius:44px;"></canvas>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">App Icon</div>
+        <div class="asset-spec">icon.png — 1024×1024px</div>
+        <button class="dl-btn" onclick="downloadCanvas('icon-main','icon.png',1024,1024,drawMainIcon)">⬇ Download 1024px</button>
+        <button class="dl-btn secondary" onclick="downloadCanvas('icon-main','icon-preview.png',200,200,drawMainIcon)">Preview</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview">
+        <canvas id="icon-adaptive" width="200" height="200" style="border-radius:100px;"></canvas>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Adaptive Icon (Android)</div>
+        <div class="asset-spec">adaptive-icon.png — 1024×1024px, circle-safe</div>
+        <button class="dl-btn" onclick="downloadCanvas('icon-adaptive','adaptive-icon.png',1024,1024,drawAdaptiveIcon)">⬇ Download 1024px</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview">
+        <canvas id="icon-favicon" width="96" height="96" style="border-radius:12px;"></canvas>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Favicon / Web Icon</div>
+        <div class="asset-spec">favicon.png — 48×48px</div>
+        <button class="dl-btn" onclick="downloadCanvas('icon-favicon','favicon.png',48,48,drawMainIcon)">⬇ Download 48px</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Splash Screen</div>
+  <div class="asset-grid">
+
+    <div class="asset-card">
+      <div class="asset-preview" style="min-height:280px;">
+        <canvas id="splash-main" width="160" height="290" style="border-radius:16px;"></canvas>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Splash Screen</div>
+        <div class="asset-spec">splash.png — 1284×2778px (iPhone 14 Pro Max)</div>
+        <button class="dl-btn" onclick="downloadCanvas('splash-main','splash.png',1284,2778,drawSplash)">⬇ Download Full Size</button>
+        <button class="dl-btn secondary" onclick="downloadCanvas('splash-main','splash-1x.png',642,1389,drawSplash)">⬇ Half Size</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview" style="min-height:280px; background: #080F1E;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;">
+          <div style="width:80px;height:80px;background:radial-gradient(circle,#F5C518,#C97D10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 0 40px rgba(245,197,24,0.5);">💰</div>
+          <div style="text-align:center;">
+            <div style="font-size:20px;font-weight:900;color:#F5C518;letter-spacing:-0.5px;">WealthWise</div>
+            <div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.5px;">Kids</div>
+          </div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);text-align:center;max-width:120px;">Building Tomorrow's Financial Leaders</div>
+        </div>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Splash Design Preview</div>
+        <div class="asset-spec">Live preview of splash screen composition</div>
+        <button class="dl-btn secondary" style="cursor:default;">Visual Reference</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">App Backgrounds (SVG — already placed in app/src/assets/backgrounds/)</div>
+  <div class="asset-grid">
+
+    <div class="asset-card">
+      <div class="asset-preview" style="background:#080F1E;">
+        <svg width="160" height="140" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="gs1" cx="30%" cy="20%" r="60%">
+              <stop offset="0%" stop-color="#1a3870" stop-opacity="0.8"/>
+              <stop offset="100%" stop-color="#080F1E" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="390" height="844" fill="#080F1E"/>
+          <rect width="390" height="844" fill="url(#gs1)"/>
+          <circle cx="40" cy="60" r="1" fill="white" opacity="0.5"/>
+          <circle cx="120" cy="30" r="1.5" fill="white" opacity="0.7"/>
+          <circle cx="200" cy="80" r="1" fill="white" opacity="0.4"/>
+          <circle cx="320" cy="45" r="1.5" fill="white" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Dark Background (Stars + Grid)</div>
+        <div class="asset-spec">background-dark.svg — quiz, lessons, student screens</div>
+        <button class="dl-btn secondary" style="cursor:default;">✓ In app/src/assets/backgrounds/</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview">
+        <svg width="160" height="140" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gauth" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#1B3A6B"/>
+              <stop offset="100%" stop-color="#0D7377"/>
+            </linearGradient>
+          </defs>
+          <rect width="390" height="844" fill="url(#gauth)"/>
+          <circle cx="50" cy="50" r="80" fill="rgba(255,255,255,0.04)"/>
+          <circle cx="350" cy="700" r="120" fill="rgba(255,255,255,0.04)"/>
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Auth / Welcome Background</div>
+        <div class="asset-spec">background-auth.svg — WelcomeScreen, SignUp, SignIn</div>
+        <button class="dl-btn secondary" style="cursor:default;">✓ In app/src/assets/backgrounds/</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview" style="background:#F8F9FC;">
+        <svg width="160" height="140" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+          <rect width="390" height="844" fill="#F8F9FC"/>
+          <circle cx="-20" cy="120" r="180" fill="rgba(27,58,107,0.04)"/>
+          <circle cx="420" cy="600" r="200" fill="rgba(27,58,107,0.03)"/>
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Light Background</div>
+        <div class="asset-spec">background-light.svg — Parent dashboard, Settings, Reports</div>
+        <button class="dl-btn secondary" style="cursor:default;">✓ In app/src/assets/backgrounds/</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview">
+        <svg width="160" height="140" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gcelebrate" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1B3A6B"/>
+              <stop offset="50%" stop-color="#0D3B26"/>
+              <stop offset="100%" stop-color="#1B3A6B"/>
+            </linearGradient>
+          </defs>
+          <rect width="390" height="844" fill="url(#gcelebrate)"/>
+          <circle cx="195" cy="200" r="160" fill="rgba(240,165,0,0.08)"/>
+          <circle cx="60" cy="100" r="4" fill="#F5C518" opacity="0.7"/>
+          <circle cx="320" cy="80" r="3" fill="#27AE60" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Celebration Background</div>
+        <div class="asset-spec">background-celebrate.svg — QuizResults (passed state)</div>
+        <button class="dl-btn secondary" style="cursor:default;">✓ In app/src/assets/backgrounds/</button>
+      </div>
+    </div>
+
+    <div class="asset-card">
+      <div class="asset-preview" style="background:#080F1E;">
+        <svg width="160" height="140" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="gcoin" cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#2a1a00"/>
+              <stop offset="100%" stop-color="#0a0a12"/>
+            </radialGradient>
+          </defs>
+          <rect width="390" height="844" fill="#0a0c18"/>
+          <rect width="390" height="844" fill="url(#gcoin)"/>
+          <circle cx="195" cy="140" r="100" fill="none" stroke="rgba(245,197,24,0.06)" stroke-width="40"/>
+        </svg>
+      </div>
+      <div class="asset-info">
+        <div class="asset-name">Store / Coin Background</div>
+        <div class="asset-spec">background-store.svg — StoreScreen, coin purchases</div>
+        <button class="dl-btn secondary" style="cursor:default;">✓ In app/src/assets/backgrounds/</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">React Native Usage Code</div>
+  <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;">
+    <div style="font-size:13px;font-weight:700;color:#F5C518;margin-bottom:16px;">How to use background SVGs in React Native screens</div>
+    <pre style="font-family:monospace;font-size:12px;color:rgba(255,255,255,0.7);white-space:pre-wrap;line-height:1.7;">
+// Import from the central assets index:
+import { darkBg, authBg, lightBg, celebrateBg, storeBg } from '../assets';
+import { SvgXml } from 'react-native-svg';
+import { StyleSheet, View } from 'react-native';
+
+// Use as full-screen background:
+const MyScreen = () => (
+  &lt;View style={{ flex: 1 }}&gt;
+    &lt;SvgXml xml={darkBg} style={StyleSheet.absoluteFillObject} preserveAspectRatio="xMidYMid slice" /&gt;
+    {/* your content on top */}
+  &lt;/View&gt;
+);
+
+// Or just use LinearGradient (already in your app!):
+import { LinearGradient } from 'expo-linear-gradient';
+const MyScreen = () => (
+  &lt;LinearGradient colors={['#1B3A6B', '#0D7377']} style={{ flex: 1 }}&gt;
+    {/* content */}
+  &lt;/LinearGradient&gt;
+);
+    </pre>
+  </div>
+</div>
+
+<script>
+function drawMainIcon(ctx, W, H) {
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#1B3A6B');
+  bg.addColorStop(1, '#0d2240');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const glow = ctx.createRadialGradient(W*0.35, H*0.3, 0, W*0.5, H*0.5, W*0.7);
+  glow.addColorStop(0, 'rgba(245,197,24,0.15)');
+  glow.addColorStop(1, 'rgba(245,197,24,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W/2, cy = H*0.45;
+  const R = W * 0.28;
+  const coinGrad = ctx.createRadialGradient(cx - R*0.2, cy - R*0.2, R*0.05, cx, cy, R);
+  coinGrad.addColorStop(0, '#FFE066');
+  coinGrad.addColorStop(0.5, '#F5C518');
+  coinGrad.addColorStop(1, '#B8860B');
+
+  ctx.shadowColor = 'rgba(245,197,24,0.5)';
+  ctx.shadowBlur = W * 0.12;
+  ctx.fillStyle = '#B8860B';
+  ctx.beginPath();
+  ctx.arc(cx, cy + W*0.02, R*1.04, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = coinGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = R * 0.08;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.82, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `bold ${R*0.38}px Georgia, serif`;
+  ctx.fillText('WW', cx, cy);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.beginPath();
+  ctx.save();
+  ctx.translate(cx - R*0.22, cy - R*0.25);
+  ctx.rotate(-0.5);
+  ctx.scale(1, 0.55);
+  ctx.arc(0, 0, R*0.28, 0, Math.PI*2);
+  ctx.restore();
+  ctx.fill();
+
+  const textY = cy + R + H*0.07;
+  ctx.fillStyle = '#F5C518';
+  ctx.font = `800 ${W*0.095}px -apple-system, 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = W*0.02;
+  ctx.fillText('WealthWise', cx, textY);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `800 ${W*0.085}px -apple-system, 'Segoe UI', sans-serif`;
+  ctx.fillText('Kids', cx, textY + H*0.1);
+  ctx.shadowBlur = 0;
+
+  const dots = [[0.12,0.15],[0.88,0.2],[0.06,0.7],[0.92,0.72],[0.2,0.88],[0.78,0.85]];
+  dots.forEach(([dx,dy]) => {
+    ctx.fillStyle = 'rgba(245,197,24,' + (0.3 + Math.random()*0.4) + ')';
+    ctx.beginPath();
+    ctx.arc(dx*W, dy*H, W*0.008, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+function drawAdaptiveIcon(ctx, W, H) {
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#1B3A6B');
+  bg.addColorStop(1, '#0d2240');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  drawMainIcon(ctx, W, H);
+}
+
+function drawSplash(ctx, W, H) {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#080F1E');
+  bg.addColorStop(0.5, '#0f1d3a');
+  bg.addColorStop(1, '#080F1E');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const g1 = ctx.createRadialGradient(W*0.25, H*0.3, 0, W*0.25, H*0.3, W*0.5);
+  g1.addColorStop(0, 'rgba(27,58,107,0.6)');
+  g1.addColorStop(1, 'rgba(27,58,107,0)');
+  ctx.fillStyle = g1;
+  ctx.fillRect(0, 0, W, H);
+
+  const g2 = ctx.createRadialGradient(W*0.8, H*0.6, 0, W*0.8, H*0.6, W*0.4);
+  g2.addColorStop(0, 'rgba(13,115,119,0.4)');
+  g2.addColorStop(1, 'rgba(13,115,119,0)');
+  ctx.fillStyle = g2;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+  ctx.lineWidth = 1;
+  const gridSize = W * 0.12;
+  for (let x = 0; x <= W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y <= H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  for (let i = 0; i < 80; i++) {
+    const sx = Math.random() * W;
+    const sy = Math.random() * H;
+    const sr = 0.5 + Math.random() * 2;
+    ctx.fillStyle = `rgba(255,255,255,${0.2 + Math.random() * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  const cx = W/2, cy = H*0.42;
+  const R = W * 0.18;
+
+  const coinGlow = ctx.createRadialGradient(cx, cy, R*0.3, cx, cy, R*2);
+  coinGlow.addColorStop(0, 'rgba(245,197,24,0.25)');
+  coinGlow.addColorStop(1, 'rgba(245,197,24,0)');
+  ctx.fillStyle = coinGlow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R*2, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let a = 0; a < 8; a++) {
+    ctx.save();
+    ctx.rotate((a / 8) * Math.PI * 2);
+    const beam = ctx.createLinearGradient(0, 0, R*3, 0);
+    beam.addColorStop(0, 'rgba(245,197,24,0.12)');
+    beam.addColorStop(1, 'rgba(245,197,24,0)');
+    ctx.fillStyle = beam;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(R*3, -R*0.3);
+    ctx.lineTo(R*3, R*0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  const coinG = ctx.createRadialGradient(cx-R*0.2, cy-R*0.2, R*0.05, cx, cy, R);
+  coinG.addColorStop(0, '#FFE066');
+  coinG.addColorStop(0.5, '#F5C518');
+  coinG.addColorStop(1, '#B8860B');
+  ctx.shadowColor = 'rgba(245,197,24,0.6)';
+  ctx.shadowBlur = W*0.05;
+  ctx.fillStyle = coinG;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = R*0.06;
+  ctx.beginPath(); ctx.arc(cx, cy, R*0.82, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold ${R*0.38}px Georgia, serif`;
+  ctx.fillText('WW', cx, cy);
+
+  const wY = cy + R + H*0.04;
+  ctx.fillStyle = '#F5C518';
+  ctx.font = `800 ${W*0.072}px -apple-system, 'Segoe UI', sans-serif`;
+  ctx.fillText('WealthWise', cx, wY);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `800 ${W*0.065}px -apple-system, 'Segoe UI', sans-serif`;
+  ctx.fillText('Kids', cx, wY + H*0.055);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.font = `${W*0.035}px -apple-system, 'Segoe UI', sans-serif`;
+  ctx.fillText("Building Tomorrow's Financial Leaders", cx, wY + H*0.115);
+
+  ctx.strokeStyle = 'rgba(245,197,24,0.3)';
+  ctx.lineWidth = 1;
+  const lineW = W*0.3;
+  ctx.beginPath();
+  ctx.moveTo(cx - lineW/2, wY + H*0.09);
+  ctx.lineTo(cx + lineW/2, wY + H*0.09);
+  ctx.stroke();
+}
+
+function renderCanvas(id, fn, w, h) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  fn(ctx, w, h);
+}
+
+function downloadCanvas(id, filename, W, H, fn) {
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  fn(ctx, W, H);
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }, 'image/png');
+}
+
+window.addEventListener('load', () => {
+  renderCanvas('icon-main', drawMainIcon, 200, 200);
+  renderCanvas('icon-adaptive', drawAdaptiveIcon, 200, 200);
+  renderCanvas('icon-favicon', drawMainIcon, 96, 96);
+  renderCanvas('splash-main', drawSplash, 160, 290);
+});
+</script>
+</body>
+</html>
