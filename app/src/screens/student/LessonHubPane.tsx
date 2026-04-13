@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, ActivityIndicator,
+  ScrollView, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -11,6 +11,7 @@ import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import { useSubscription } from '../../hooks/useSubscription';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
+import { hapticTap } from '../../utils/haptics';
 
 interface School {
   id:           number;
@@ -52,6 +53,7 @@ export default function LessonHubPane() {
   const [streak,   setStreak]   = useState(0);
   const [coins,    setCoins]    = useState(0);
   const [loading,  setLoading]  = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadData(); }, [selectedChild?.id]);
 
@@ -89,6 +91,12 @@ export default function LessonHubPane() {
     }
 
     setLoading(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   };
 
   // ── Derived values ──────────────────────────────────────────
@@ -149,7 +157,7 @@ export default function LessonHubPane() {
         {/* Left vertical sidebar */}
         <View style={s.sidebar}>
           {SIDEBAR.map((item) => (
-            <TouchableOpacity key={item.label} style={s.sideBtn} onPress={item.go}>
+            <TouchableOpacity key={item.label} style={s.sideBtn} onPress={() => { hapticTap(); item.go(); }}>
               <Ionicons name={item.icon} size={20} color="rgba(255,255,255,0.65)" />
               <Text style={s.sideLbl}>{item.label}</Text>
             </TouchableOpacity>
@@ -161,22 +169,37 @@ export default function LessonHubPane() {
           style={s.main}
           contentContainerStyle={s.mainContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F0A500" />}
         >
           {loading ? (
-            <ActivityIndicator color="#F0A500" style={{ marginTop: 80 }} />
+            <View>
+              <View style={[s.skeletonCard, { height: 240, marginBottom: 18 }]} />
+              <View style={[s.skeletonLine, { width: '38%', marginBottom: 12 }]} />
+              <View style={[s.skeletonCard, { height: 82, marginBottom: 10 }]} />
+              <View style={[s.skeletonCard, { height: 82, marginBottom: 10 }]} />
+            </View>
           ) : (
             <>
+              {schools.length === 0 ? (
+                <View style={s.emptyCard}>
+                  <Text style={s.emptyEmoji}>🏫</Text>
+                  <Text style={s.emptyTitle}>No schools yet</Text>
+                  <Text style={s.emptyText}>Your learning path is being prepared. Pull down to refresh.</Text>
+                </View>
+              ) : (
+                <>
               {/* ─── Hero school card ───────────────────── */}
               <TouchableOpacity
                 style={s.heroCard}
                 activeOpacity={0.88}
-                onPress={() =>
+                onPress={() => {
+                  hapticTap();
                   activeSchool &&
                   navigation.navigate('LessonViewer', {
                     schoolId: activeSchool.id,
                     schoolTitle: activeSchool.title,
-                  })
-                }
+                  });
+                }}
               >
                 <LinearGradient
                   colors={['#1B3A6B', '#0D5E3A']}
@@ -237,14 +260,15 @@ export default function LessonHubPane() {
                   key={school.id}
                   style={[s.lockedCard, isActive && s.lockedCardUnlocked]}
                   activeOpacity={0.85}
-                  onPress={() =>
+                  onPress={() => {
+                    hapticTap();
                     isActive
                       ? navigation.navigate('LessonViewer', {
                           schoolId: school.id,
                           schoolTitle: school.title,
                         })
-                      : navigation.navigate('Upgrade')
-                  }
+                      : navigation.navigate('Upgrade');
+                  }}
                 >
                   <Text style={s.lockedEmoji}>{school.icon_name}</Text>
                   <View style={{ flex: 1 }}>
@@ -260,6 +284,8 @@ export default function LessonHubPane() {
                   />
                 </TouchableOpacity>
               ))}
+                </>
+              )}
             </>
           )}
         </ScrollView>
@@ -358,4 +384,25 @@ const s = StyleSheet.create({
   lockedEmoji: { fontSize: 26 },
   lockedName:  { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.55)' },
   lockedHint:  { fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 2 },
+  skeletonCard: {
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  skeletonLine: {
+    height: 11,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  emptyCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    paddingVertical: 34,
+    paddingHorizontal: 20,
+  },
+  emptyEmoji: { fontSize: 38, marginBottom: 10 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 8 },
+  emptyText: { fontSize: 13, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 20 },
 });

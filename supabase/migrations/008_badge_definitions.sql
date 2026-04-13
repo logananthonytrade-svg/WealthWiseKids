@@ -13,8 +13,24 @@ END $$;
 -- ============================================================
 
 -- â”€â”€ 1. Unique constraint so ON CONFLICT (name) works â”€â”€â”€â”€â”€â”€â”€â”€â”€
-ALTER TABLE badges
-  ADD CONSTRAINT IF NOT EXISTS badges_name_unique UNIQUE (name);
+DO $$
+BEGIN
+  -- Remove pre-existing duplicate names so the unique constraint can be added.
+  DELETE FROM badges b
+  USING badges d
+  WHERE b.name = d.name
+    AND b.ctid > d.ctid;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'badges_name_unique'
+      AND conrelid = 'badges'::regclass
+  ) THEN
+    ALTER TABLE badges
+      ADD CONSTRAINT badges_name_unique UNIQUE (name);
+  END IF;
+END $$;
 
 -- â”€â”€ 2. Fix student_badges_write â€” parent-session model â”€â”€â”€â”€â”€â”€â”€
 --    Old policy: child_id = auth.uid() â†’ always fails because

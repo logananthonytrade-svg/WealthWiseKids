@@ -10,6 +10,7 @@ import { differenceInYears, parseISO } from 'date-fns';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { hapticTap } from '../../utils/haptics';
 
 const AVATARS = ['??', '??', '??', '??', '??', '??', '??', '??', '??', '??'];
 
@@ -95,7 +96,7 @@ export default function CreateChildProfileScreen() {
     <LinearGradient colors={['#0D1F3C', '#091528']} style={{ flex: 1 }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => { hapticTap(); navigation.goBack(); }}>
             <Text style={styles.backText}>? Back</Text>
           </TouchableOpacity>
 
@@ -109,7 +110,7 @@ export default function CreateChildProfileScreen() {
             {AVATARS.map((emoji, i) => (
               <TouchableOpacity
                 key={i}
-                onPress={() => setAvatar(i + 1)}
+                onPress={() => { hapticTap(); setAvatar(i + 1); }}
                 style={[styles.avatarBtn, avatarChoice === i + 1 && styles.avatarSelected]}
               >
                 <Text style={styles.avatarEmoji}>{emoji}</Text>
@@ -144,7 +145,7 @@ export default function CreateChildProfileScreen() {
 
           <TouchableOpacity
             style={[styles.primaryBtn, loading && styles.disabled]}
-            onPress={handleSave}
+            onPress={() => { hapticTap(); handleSave(); }}
             disabled={loading}
           >
             <Text style={styles.primaryBtnText}>{loading ? 'Creating profile�' : 'Create Profile'}</Text>

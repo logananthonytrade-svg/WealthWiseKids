@@ -9,6 +9,7 @@ import supabase from '../../lib/supabase';
 import useAuthStore, { type AuthState } from '../../store/authStore';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import LessonProgressBar from '../../components/lessons/LessonProgressBar';
+import { hapticTap } from '../../utils/haptics';
 
 const AVATARS = ['🦁', '🐯', '🦊', '🐼', '🐨', '🦋', '🐬', '🦅', '🦉', '🐉'];
 
@@ -115,6 +116,7 @@ export default function SchoolsScreen() {
   };
 
   const handleSchoolPress = (school: School) => {
+    hapticTap();
     // Check prerequisites: must complete previous school first
     if (school.order_number > 1) {
       const prevSchool = schools.find((s: School) => s.order_number === school.order_number - 1);
@@ -207,6 +209,13 @@ export default function SchoolsScreen() {
             </TouchableOpacity>
           );
         }}
+        ListEmptyComponent={(
+          <View style={styles.emptySchools}>
+            <Text style={styles.emptySchoolsIcon}>🏫</Text>
+            <Text style={styles.emptySchoolsTitle}>No schools available</Text>
+            <Text style={styles.emptySchoolsText}>Your curriculum has not loaded yet. Pull to refresh later.</Text>
+          </View>
+        )}
       />
 
       {/* Locked modal (pre-req or premium) */}
@@ -222,16 +231,16 @@ export default function SchoolsScreen() {
               <>
                 <TouchableOpacity
                   style={styles.modalBtn}
-                  onPress={() => { setLockedModal(null); navigation.navigate('Upgrade'); }}
+                  onPress={() => { hapticTap(); setLockedModal(null); navigation.navigate('Upgrade'); }}
                 >
                   <Text style={styles.modalBtnText}>Upgrade to Premium ⭐</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.modalSecondary} onPress={() => setLockedModal(null)}>
+                <TouchableOpacity style={styles.modalSecondary} onPress={() => { hapticTap(); setLockedModal(null); }}>
                   <Text style={styles.modalSecondaryText}>Maybe later</Text>
                 </TouchableOpacity>
               </>
             ) : (
-              <TouchableOpacity style={styles.modalBtn} onPress={() => setLockedModal(null)}>
+              <TouchableOpacity style={styles.modalBtn} onPress={() => { hapticTap(); setLockedModal(null); }}>
                 <Text style={styles.modalBtnText}>Got it</Text>
               </TouchableOpacity>
             )}
@@ -284,4 +293,8 @@ const styles = StyleSheet.create({
   modalSecondary:  { paddingVertical: 10 },
   modalSecondaryText: { color: '#888', fontSize: 14 },
   coinProgress:    { fontSize: 12, color: '#F0A500', fontWeight: '600', marginTop: 4 },
+  emptySchools: { alignItems: 'center', marginTop: 40, paddingHorizontal: 26 },
+  emptySchoolsIcon: { fontSize: 48, marginBottom: 10 },
+  emptySchoolsTitle: { fontSize: 18, fontWeight: '800', color: '#1B3A6B', marginBottom: 6 },
+  emptySchoolsText: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 20 },
 });

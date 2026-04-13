@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Modal,
+  TouchableOpacity, Modal, RefreshControl,
 } from 'react-native';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import LessonProgressBar from '../../components/lessons/LessonProgressBar';
+import { hapticTap } from '../../utils/haptics';
 
 interface Badge {
   id: string;
@@ -37,11 +38,14 @@ export default function ProgressScreen() {
   const [schoolProgress, setSchoolProg] = useState<Record<number, { done: number; total: number }>>({});
   const [schools, setSchools]         = useState<any[]>([]);
   const [selectedBadge, setSelected]  = useState<Badge | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [refreshing, setRefreshing]   = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     if (!selectedChild) return;
+    setLoading(true);
     const childId = selectedChild.id;
 
     const [streakRes, coinsRes, progressRes, attemptsRes, badgesRes, earnedRes, schoolsRes] = await Promise.all([
@@ -94,12 +98,43 @@ export default function ProgressScreen() {
       sp[s.id] = { done: doneBySchool[s.id] ?? 0, total: counts[i].count ?? 0 };
     });
     setSchoolProg(sp);
+    setLoading(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1B3A6B" />}
+      >
         <Text style={styles.pageTitle}>My Progress</Text>
+
+        {loading ? (
+          <View>
+            <View style={styles.skeletonGrid}>
+              <View style={styles.skeletonCard} />
+              <View style={styles.skeletonCard} />
+              <View style={styles.skeletonCard} />
+            </View>
+            <View style={[styles.skeletonLine, { width: '34%', marginBottom: 10 }]} />
+            <View style={[styles.skeletonBar, { marginBottom: 8 }]} />
+            <View style={[styles.skeletonBar, { marginBottom: 8 }]} />
+            <View style={[styles.skeletonLine, { width: '40%', marginTop: 10, marginBottom: 10 }]} />
+            <View style={styles.skeletonGrid}>
+              <View style={styles.skeletonCard} />
+              <View style={styles.skeletonCard} />
+              <View style={styles.skeletonCard} />
+            </View>
+          </View>
+        ) : (
+          <>
 
         {/* Stats grid */}
         {stats && (
@@ -114,6 +149,13 @@ export default function ProgressScreen() {
 
         {/* School progress */}
         <Text style={styles.sectionTitle}>Schools</Text>
+        {schools.length === 0 && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>🏫</Text>
+            <Text style={styles.emptyTitle}>No schools yet</Text>
+            <Text style={styles.emptyText}>We will show your progress here once schools are available. Pull to refresh.</Text>
+          </View>
+        )}
         {schools.map((s) => {
           const p = schoolProgress[s.id] ?? { done: 0, total: 0 };
           return (
@@ -132,6 +174,13 @@ export default function ProgressScreen() {
 
         {/* Badge collection */}
         <Text style={styles.sectionTitle}>Trophy Case</Text>
+        {allBadges.length === 0 && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>🏅</Text>
+            <Text style={styles.emptyTitle}>No badges available</Text>
+            <Text style={styles.emptyText}>Badge definitions have not been loaded yet. Pull to refresh.</Text>
+          </View>
+        )}
         <View style={styles.badgeGrid}>
           {allBadges.map((b) => {
             const earned = earnedIds.has(b.id);
@@ -139,7 +188,7 @@ export default function ProgressScreen() {
               <TouchableOpacity
                 key={b.id}
                 style={[styles.badgeCard, !earned && styles.badgeLocked]}
-                onPress={() => setSelected(b)}
+                onPress={() => { hapticTap(); setSelected(b); }}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.badgeEmoji, !earned && { opacity: 0.25 }]}>{b.icon_name}</Text>
@@ -153,11 +202,13 @@ export default function ProgressScreen() {
             );
           })}
         </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Badge detail modal */}
       <Modal visible={!!selectedBadge} transparent animationType="fade">
-        <TouchableOpacity style={styles.overlay} onPress={() => setSelected(null)}>
+        <TouchableOpacity style={styles.overlay} onPress={() => { hapticTap(); setSelected(null); }}>
           <View style={styles.modal}>
             <Text style={styles.modalEmoji}>{selectedBadge?.icon_name}</Text>
             <Text style={styles.modalName}>{selectedBadge?.name}</Text>
@@ -229,4 +280,31 @@ const styles = StyleSheet.create({
   rarityText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   modalDesc: { fontSize: 14, color: '#444', textAlign: 'center', lineHeight: 20, marginBottom: 8 },
   howToEarn: { fontSize: 13, color: '#888', fontStyle: 'italic', textAlign: 'center' },
+  emptyBox: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emptyIcon: { fontSize: 30, marginBottom: 8 },
+  emptyTitle: { fontSize: 15, fontWeight: '800', color: '#1B3A6B', marginBottom: 6 },
+  emptyText: { fontSize: 12, color: '#888', textAlign: 'center', lineHeight: 18 },
+  skeletonGrid: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+  skeletonCard: {
+    width: '30%',
+    height: 86,
+    borderRadius: 12,
+    backgroundColor: '#E8ECF4',
+  },
+  skeletonLine: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#E8ECF4',
+  },
+  skeletonBar: {
+    height: 54,
+    borderRadius: 12,
+    backgroundColor: '#E8ECF4',
+  },
 });

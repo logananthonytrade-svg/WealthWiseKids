@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, ActivityIndicator,
+  TouchableOpacity, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -9,6 +9,8 @@ import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import { useSubscription } from '../../hooks/useSubscription';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
+import CoinAwardPop from '../../components/CoinAwardPop';
+import { hapticTap, hapticSuccess, hapticError } from '../../utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -53,7 +55,9 @@ export default function StoreScreen() {
   const [balance,      setBalance]      = useState(0);
   const [items,        setItems]        = useState<StoreItem[]>([]);
   const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
   const [buyingItemId, setBuyingItemId] = useState<number | null>(null);
+  const [coinPop, setCoinPop] = useState({ amount: 0, nonce: 0 });
 
   useEffect(() => {
     loadCatalog();
@@ -95,6 +99,8 @@ export default function StoreScreen() {
         const data = await res.json();
         if (data.coins_awarded > 0) {
           setBalance((b) => b + data.coins_awarded);
+          setCoinPop({ amount: data.coins_awarded, nonce: Date.now() });
+          hapticSuccess();
           Alert.alert(
             '💰 Monthly Bonus!',
             `${data.coins_awarded} WealthCoins added — your Premium monthly reward!`
@@ -106,8 +112,15 @@ export default function StoreScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCatalog();
+    setRefreshing(false);
+  };
+
   // ── Purchase handlers ────────────────────────────────────────
   const handleBuyItem = (item: StoreItem) => {
+    hapticTap();
     if (item.owned) return;
 
     if (balance < item.coin_cost) {
@@ -136,13 +149,16 @@ export default function StoreScreen() {
               });
               const data = await res.json();
               if (res.ok) {
+                hapticSuccess();
                 setBalance(data.new_balance);
                 setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, owned: true } : i));
                 Alert.alert('✅ Purchased!', `${item.name} is now in "My Tools".`);
               } else {
+                hapticError();
                 Alert.alert('Purchase failed', data.error ?? 'Please try again.');
               }
             } catch {
+              hapticError();
               Alert.alert('Error', 'Network error. Please try again.');
             } finally {
               setBuyingItemId(null);
@@ -158,6 +174,7 @@ export default function StoreScreen() {
   if (!selectedChild) {
     return (
       <View style={styles.container}>
+        <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>👤</Text>
           <Text style={styles.emptyTitle}>No profile selected</Text>
@@ -171,6 +188,7 @@ export default function StoreScreen() {
 
   return (
     <View style={styles.container}>
+      <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
 
       {/* ── Balance header ─────────────────────────────────────── */}
       <View style={styles.header}>
@@ -196,7 +214,7 @@ export default function StoreScreen() {
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => { hapticTap(); setActiveTab(tab); }}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                 {labels[tab]}
@@ -207,8 +225,11 @@ export default function StoreScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#F0A500" />
+        <View style={styles.scrollContent}>
+          <View style={[styles.skeletonBar, { width: '60%', alignSelf: 'center', marginBottom: 18 }]} />
+          <View style={[styles.skeletonCard, { height: 118, marginBottom: 12 }]} />
+          <View style={[styles.skeletonCard, { height: 118, marginBottom: 12 }]} />
+          <View style={[styles.skeletonCard, { height: 118 }]} />
         </View>
       ) : (
         <>
@@ -217,8 +238,17 @@ export default function StoreScreen() {
             <ScrollView
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F0A500" />}
             >
               <Text style={styles.sectionHint}>Permanent unlocks — yours forever once purchased</Text>
+
+              {items.length === 0 && (
+                <View style={styles.toolsEmpty}>
+                  <Text style={styles.emptyIcon}>🛍️</Text>
+                  <Text style={styles.emptyTitle}>Store is empty</Text>
+                  <Text style={styles.emptyDesc}>No tools are available right now. Pull down to refresh later.</Text>
+                </View>
+              )}
 
               {items.map((item) => (
                 <View key={item.id} style={[styles.shopCard, item.owned && styles.shopCardOwned]}>
@@ -259,7 +289,7 @@ export default function StoreScreen() {
                       {item.owned && (
                         <TouchableOpacity
                           style={styles.openBtnSmall}
-                          onPress={() => openTool(item.feature_key, navigation)}
+                          onPress={() => { hapticTap(); openTool(item.feature_key, navigation); }}
                         >
                           <Text style={styles.openBtnSmallText}>Open →</Text>
                         </TouchableOpacity>
@@ -300,7 +330,7 @@ export default function StoreScreen() {
                   <Text style={styles.emptyDesc}>
                     {"You haven't bought any tools yet. Check out the Shop to unlock powerful features like the Budget Tracker!"}
                   </Text>
-                  <TouchableOpacity style={styles.shopCTA} onPress={() => setActiveTab('storefront')}>
+                  <TouchableOpacity style={styles.shopCTA} onPress={() => { hapticTap(); setActiveTab('storefront'); }}>
                     <Text style={styles.shopCTAText}>Browse the Shop →</Text>
                   </TouchableOpacity>
                 </View>
@@ -314,7 +344,7 @@ export default function StoreScreen() {
                     </View>
                     <TouchableOpacity
                       style={styles.openBtn}
-                      onPress={() => openTool(tool.feature_key, navigation)}
+                      onPress={() => { hapticTap(); openTool(tool.feature_key, navigation); }}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.openBtnText}>Open</Text>
@@ -422,4 +452,13 @@ const styles = StyleSheet.create({
   emptyDesc:  { fontSize: 14, color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
   shopCTA:    { backgroundColor: '#1B3A6B', borderRadius: 50, paddingHorizontal: 24, paddingVertical: 12 },
   shopCTAText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  skeletonCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+  },
+  skeletonBar: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
 });

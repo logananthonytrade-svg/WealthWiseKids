@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import { syncTransactions } from '../../utils/plaidUtils';
+import { hapticTap } from '../../utils/haptics';
 
 interface CategoryTotal {
   category: string;
@@ -127,7 +128,7 @@ export default function SpendingReportsScreen() {
           <Text style={styles.noBankSub}>
             Connect a bank account to automatically track your spending and hit your goals.
           </Text>
-          <TouchableOpacity style={styles.connectBtn} onPress={() => navigation.navigate('ConnectBank')}>
+          <TouchableOpacity style={styles.connectBtn} onPress={() => { hapticTap(); navigation.navigate('ConnectBank'); }}>
             <Text style={styles.connectBtnText}>Connect a Bank</Text>
           </TouchableOpacity>
         </View>
@@ -143,13 +144,21 @@ export default function SpendingReportsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Spending</Text>
-          <TouchableOpacity style={styles.syncBtn} onPress={handleSync} disabled={syncing}>
+          <TouchableOpacity style={styles.syncBtn} onPress={() => { hapticTap(); handleSync(); }} disabled={syncing}>
             {syncing
               ? <ActivityIndicator color="#1B3A6B" size="small" />
               : <Text style={styles.syncText}>↻ Sync</Text>
             }
           </TouchableOpacity>
         </View>
+
+        {categories.length === 0 && transactions.length === 0 && (
+          <View style={styles.emptyReports}>
+            <Text style={styles.emptyReportsIcon}>📊</Text>
+            <Text style={styles.emptyReportsTitle}>No reports yet</Text>
+            <Text style={styles.emptyReportsText}>Sync transactions or add budget entries to see spending insights.</Text>
+          </View>
+        )}
 
         {lastSynced && (
           <Text style={styles.lastSynced}>Last synced {new Date(lastSynced).toLocaleDateString()}</Text>
@@ -254,4 +263,14 @@ const styles = StyleSheet.create({
   noBankSub:   { fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
   connectBtn:  { backgroundColor: '#1B3A6B', borderRadius: 50, paddingHorizontal: 36, paddingVertical: 16 },
   connectBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  emptyReports: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyReportsIcon: { fontSize: 30, marginBottom: 8 },
+  emptyReportsTitle: { fontSize: 16, fontWeight: '800', color: '#1B3A6B', marginBottom: 6 },
+  emptyReportsText: { fontSize: 12, color: '#888', textAlign: 'center', lineHeight: 18 },
 });

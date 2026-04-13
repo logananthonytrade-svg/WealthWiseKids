@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Animated, TouchableOpacity, Modal,
 } from 'react-native';
 import { BadgeRecord } from '../utils/badgeUtils';
+import { hapticSuccess, hapticTap } from '../utils/haptics';
 
 interface Props {
   badges: BadgeRecord[];
@@ -18,6 +19,7 @@ export default function BadgeAwardModal({ badges, onDismiss }: Props) {
 
   useEffect(() => {
     if (visible) {
+      hapticSuccess();
       // Reset and animate in
       slideAnim.setValue(300);
       scaleAnim.setValue(0);
@@ -29,6 +31,7 @@ export default function BadgeAwardModal({ badges, onDismiss }: Props) {
   }, [index, visible]);
 
   const handleDismiss = () => {
+    hapticTap();
     if (index + 1 < badges.length) {
       setIndex((i) => i + 1);
     } else {

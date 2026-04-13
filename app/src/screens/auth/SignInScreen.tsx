@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import supabase from '../../lib/supabase';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { hapticTap, hapticError } from '../../utils/haptics';
 
 type Props = { navigation: StackNavigationProp<AuthStackParamList, 'SignIn'> };
 
@@ -19,6 +20,7 @@ export default function SignInScreen({ navigation }: Props) {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
+      hapticError();
       setError('Please enter your email and password.');
       return;
     }
@@ -35,10 +37,13 @@ export default function SignInScreen({ navigation }: Props) {
       // Translate Supabase error messages into plain English
       if (signInError.message.includes('Invalid login')) {
         setError('Incorrect email or password. Please try again.');
+        hapticError();
       } else if (signInError.message.includes('Email not confirmed')) {
         setError('Please verify your email address first. Check your inbox for a link from us.');
+        hapticError();
       } else {
         setError(signInError.message);
+        hapticError();
       }
     }
     // On success, authStore listener handles navigation automatically
@@ -96,7 +101,7 @@ export default function SignInScreen({ navigation }: Props) {
           placeholderTextColor="rgba(255,255,255,0.3)"
         />
 
-        <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotRow}>
+        <TouchableOpacity onPress={() => { hapticTap(); handleForgotPassword(); }} style={styles.forgotRow}>
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </TouchableOpacity>
 
@@ -107,13 +112,13 @@ export default function SignInScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={[styles.primaryBtn, loading && styles.disabled]}
-          onPress={handleSignIn}
+          onPress={() => { hapticTap(); handleSignIn(); }}
           disabled={loading}
         >
           <Text style={styles.primaryBtnText}>{loading ? 'Signing in…' : 'Sign In'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.switchRow} onPress={() => navigation.navigate('SignUp')}>
+        <TouchableOpacity style={styles.switchRow} onPress={() => { hapticTap(); navigation.navigate('SignUp'); }}>
           <Text style={styles.switchText}>
             Don't have an account? <Text style={styles.link}>Create one</Text>
           </Text>

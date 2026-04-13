@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import supabase from '../../lib/supabase';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { hapticTap, hapticError } from '../../utils/haptics';
 
 type Props = { navigation: StackNavigationProp<AuthStackParamList, 'SignUp'> };
 
@@ -31,7 +32,7 @@ export default function SignUpScreen({ navigation }: Props) {
 
   const handleSignUp = async () => {
     const validationError = validate();
-    if (validationError) { setError(validationError); return; }
+    if (validationError) { hapticError(); setError(validationError); return; }
 
     setLoading(true);
     setError(null);
@@ -44,6 +45,7 @@ export default function SignUpScreen({ navigation }: Props) {
 
     setLoading(false);
     if (signUpError) {
+      hapticError();
       setError(signUpError.message);
     } else {
       setDone(true);
@@ -60,7 +62,7 @@ export default function SignUpScreen({ navigation }: Props) {
             We sent a verification link to {email.trim().toLowerCase()}.{'\n\n'}
             Click the link to activate your account, then come back and sign in.
           </Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('SignIn')}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => { hapticTap(); navigation.navigate('SignIn'); }}>
             <Text style={styles.primaryBtnText}>Go to Sign In</Text>
           </TouchableOpacity>
         </SafeAreaView>
@@ -76,7 +78,7 @@ export default function SignUpScreen({ navigation }: Props) {
       >
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => { hapticTap(); navigation.goBack(); }}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
@@ -92,7 +94,7 @@ export default function SignUpScreen({ navigation }: Props) {
         <Input label="Confirm Password" value={confirm} onChangeText={setConfirm}
           placeholder="Re-enter password" secureTextEntry />
 
-        <TouchableOpacity style={styles.checkRow} onPress={() => setAgreed(!agreed)}>
+        <TouchableOpacity style={styles.checkRow} onPress={() => { hapticTap(); setAgreed(!agreed); }}>
           <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
             {agreed && <Text style={styles.checkTick}>✓</Text>}
           </View>
@@ -107,13 +109,13 @@ export default function SignUpScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={[styles.primaryBtn, loading && styles.disabled]}
-          onPress={handleSignUp}
+          onPress={() => { hapticTap(); handleSignUp(); }}
           disabled={loading}
         >
           <Text style={styles.primaryBtnText}>{loading ? 'Creating account…' : 'Create Account'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.switchRow} onPress={() => navigation.navigate('SignIn')}>
+        <TouchableOpacity style={styles.switchRow} onPress={() => { hapticTap(); navigation.navigate('SignIn'); }}>
           <Text style={styles.switchText}>Already have an account? <Text style={styles.link}>Sign In</Text></Text>
         </TouchableOpacity>
       </ScrollView>

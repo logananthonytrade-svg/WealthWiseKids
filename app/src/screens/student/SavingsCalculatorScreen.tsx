@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, TextInput, Platform,
+  TouchableOpacity, TextInput, Platform, KeyboardAvoidingView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { hapticTap } from '../../utils/haptics';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ function GoalPlanner() {
             <TouchableOpacity
               key={f.key}
               style={[ss.freqChip, freq === f.key && ss.freqChipActive]}
-              onPress={() => setFreq(f.key)}
+              onPress={() => { hapticTap(); setFreq(f.key); }}
             >
               <Text style={[ss.freqTxt, freq === f.key && ss.freqTxtActive]}>{f.label}</Text>
             </TouchableOpacity>
@@ -292,13 +293,13 @@ function InterestCalc() {
         <View style={ss.freqRow}>
           <TouchableOpacity
             style={[ss.freqChip, compound && ss.freqChipActive]}
-            onPress={() => setCompound(true)}
+            onPress={() => { hapticTap(); setCompound(true); }}
           >
             <Text style={[ss.freqTxt, compound && ss.freqTxtActive]}>🔄 Compound</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[ss.freqChip, !compound && ss.freqChipActive]}
-            onPress={() => setCompound(false)}
+            onPress={() => { hapticTap(); setCompound(false); }}
           >
             <Text style={[ss.freqTxt, !compound && ss.freqTxtActive]}>📏 Simple</Text>
           </TouchableOpacity>
@@ -408,10 +409,11 @@ export default function SavingsCalculatorScreen() {
 
   return (
     <SafeAreaView style={ss.safe}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
       {/* Header */}
       <View style={ss.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={ss.backBtn}>
+        <TouchableOpacity onPress={() => { hapticTap(); navigation.goBack(); }} style={ss.backBtn}>
           <Ionicons name="chevron-back" size={22} color="#1B3A6B" />
         </TouchableOpacity>
         <Text style={ss.headerTitle}>Savings Calculator</Text>
@@ -422,13 +424,13 @@ export default function SavingsCalculatorScreen() {
       <View style={ss.tabs}>
         <TouchableOpacity
           style={[ss.tab, mode === 'goal' && ss.tabActive]}
-          onPress={() => setMode('goal')}
+          onPress={() => { hapticTap(); setMode('goal'); }}
         >
           <Text style={[ss.tabTxt, mode === 'goal' && ss.tabTxtActive]}>🎯  Goal Planner</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[ss.tab, mode === 'interest' && ss.tabActive]}
-          onPress={() => setMode('interest')}
+          onPress={() => { hapticTap(); setMode('interest'); }}
         >
           <Text style={[ss.tabTxt, mode === 'interest' && ss.tabTxtActive]}>📈  Interest Calc</Text>
         </TouchableOpacity>
@@ -436,6 +438,7 @@ export default function SavingsCalculatorScreen() {
 
       {mode === 'goal'     ? <GoalPlanner />  : null}
       {mode === 'interest' ? <InterestCalc /> : null}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

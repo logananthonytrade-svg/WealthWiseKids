@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import supabase from '../../lib/supabase';
+import { hapticTap, hapticError } from '../../utils/haptics';
 
 interface Props {
   onDone: () => void;
@@ -19,10 +20,12 @@ export default function ResetPasswordScreen({ onDone }: Props) {
 
   const handleReset = async () => {
     if (password.length < 8) {
+      hapticError();
       setError('Password must be at least 8 characters.');
       return;
     }
     if (password !== confirm) {
+      hapticError();
       setError('Passwords do not match.');
       return;
     }
@@ -34,6 +37,7 @@ export default function ResetPasswordScreen({ onDone }: Props) {
 
     setLoading(false);
     if (updateError) {
+      hapticError();
       setError(updateError.message);
     } else {
       setDone(true);
@@ -50,7 +54,7 @@ export default function ResetPasswordScreen({ onDone }: Props) {
           <Text style={styles.doneBody}>
             Your password has been changed successfully.{'\n'}Sign in with your new password.
           </Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={onDone}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => { hapticTap(); onDone(); }}>
             <Text style={styles.primaryBtnText}>Back to Sign In</Text>
           </TouchableOpacity>
         </View>
@@ -105,7 +109,7 @@ export default function ResetPasswordScreen({ onDone }: Props) {
 
           <TouchableOpacity
             style={[styles.primaryBtn, loading && styles.disabled]}
-            onPress={handleReset}
+            onPress={() => { hapticTap(); handleReset(); }}
             disabled={loading}
           >
             <Text style={styles.primaryBtnText}>{loading ? 'Updating…' : 'Update Password'}</Text>
