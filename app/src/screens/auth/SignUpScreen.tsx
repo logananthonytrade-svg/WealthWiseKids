@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, KeyboardAvoidingView, Platform, StatusBar, SafeAreaView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import supabase from '../../lib/supabase';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -51,33 +52,36 @@ export default function SignUpScreen({ navigation }: Props) {
 
   if (done) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.checkmark}>📬</Text>
-        <Text style={styles.doneTitle}>Check your email!</Text>
-        <Text style={styles.doneBody}>
-          We sent a verification link to {email.trim().toLowerCase()}.{'\n\n'}
-          Click the link to activate your account, then come back and sign in.
-        </Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('SignIn')}>
-          <Text style={styles.primaryBtnText}>Go to Sign In</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <LinearGradient colors={['#0D1F3C', '#091528']} style={styles.doneContainer}>
+        <SafeAreaView style={styles.doneSafe}>
+          <Text style={styles.checkmark}>📧</Text>
+          <Text style={styles.doneTitle}>Check your email!</Text>
+          <Text style={styles.doneBody}>
+            We sent a verification link to {email.trim().toLowerCase()}.{'\n\n'}
+            Click the link to activate your account, then come back and sign in.
+          </Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('SignIn')}>
+            <Text style={styles.primaryBtnText}>Go to Sign In</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar barStyle="dark-content" />
+    <LinearGradient colors={['#0D1F3C', '#091528']} style={styles.gradient}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+      <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Create Parent Account</Text>
-        <Text style={styles.subtitle}>Parents sign up here. You will add your children after.</Text>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Parents sign up here. You'll add your child after.</Text>
 
         <Input label="Full Name" value={fullName} onChangeText={setFullName}
           placeholder="Jane Smith" autoCapitalize="words" />
@@ -113,54 +117,64 @@ export default function SignUpScreen({ navigation }: Props) {
           <Text style={styles.switchText}>Already have an account? <Text style={styles.link}>Sign In</Text></Text>
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 function Input({ label, ...props }: any) {
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: 4 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput style={styles.input} placeholderTextColor="#aaa" {...props} />
+      <TextInput style={styles.input} placeholderTextColor="rgba(255,255,255,0.3)" {...props} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  scroll: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 48 },
-  backBtn: { marginBottom: 24 },
-  backText: { color: '#1B3A6B', fontSize: 15 },
-  title: { fontSize: 26, fontWeight: '800', color: '#1B3A6B', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 28 },
-  label: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
-  input: {
-    borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 12,
-    fontSize: 15, color: '#222',
+  gradient: { flex: 1 },
+  container: { flex: 1 },
+  doneContainer: { flex: 1 },
+  doneSafe: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  scroll: { paddingHorizontal: 28, paddingTop: 60, paddingBottom: 48 },
+  backBtn: { marginBottom: 28 },
+  backText: { color: 'rgba(255,255,255,0.65)', fontSize: 15 },
+  title: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 28 },
+  label: {
+    fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.55)',
+    marginBottom: 8, letterSpacing: 0.8, textTransform: 'uppercase',
   },
-  checkRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20, gap: 10 },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: '#fff', marginBottom: 16,
+  },
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20, gap: 12 },
   checkbox: {
-    width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#ddd',
-    alignItems: 'center', justifyContent: 'center',
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
   },
   checkboxChecked: { backgroundColor: '#27AE60', borderColor: '#27AE60' },
   checkTick: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  agreeText: { flex: 1, fontSize: 13, color: '#444', lineHeight: 20 },
-  link: { color: '#1B3A6B', fontWeight: '700' },
+  agreeText: { flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 20 },
+  link: { color: '#F5C518', fontWeight: '700' },
   errorText: {
-    backgroundColor: '#FFF0F0', color: '#C62828', padding: 12,
-    borderRadius: 8, fontSize: 13, marginBottom: 16,
+    backgroundColor: 'rgba(198,40,40,0.12)', color: '#FC8181', padding: 12,
+    borderRadius: 10, fontSize: 13, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(198,40,40,0.25)',
   },
   primaryBtn: {
-    backgroundColor: '#1B3A6B', borderRadius: 50,
+    backgroundColor: '#F5C518', borderRadius: 50,
     paddingVertical: 16, alignItems: 'center', marginBottom: 16,
   },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  switchRow: { alignItems: 'center' },
-  switchText: { fontSize: 14, color: '#666' },
-  checkmark: { fontSize: 64, textAlign: 'center', marginTop: 80, marginBottom: 24 },
-  doneTitle: { fontSize: 26, fontWeight: '800', color: '#1B3A6B', textAlign: 'center', marginBottom: 12 },
-  doneBody: { fontSize: 15, color: '#444', textAlign: 'center', lineHeight: 22, marginBottom: 40, marginHorizontal: 24 },
+  primaryBtnText: { color: '#1B3A6B', fontSize: 16, fontWeight: '800' },
+  disabled: { opacity: 0.5 },
+  switchRow: { alignItems: 'center', marginTop: 4 },
+  switchText: { fontSize: 14, color: 'rgba(255,255,255,0.5)' },
+  checkmark: { fontSize: 64, textAlign: 'center', marginBottom: 24 },
+  doneTitle: { fontSize: 26, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 12 },
+  doneBody: { fontSize: 15, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 22, marginBottom: 40 },
 });
