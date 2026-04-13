@@ -308,7 +308,7 @@ UPDATE lessons SET
     {
       "type": "body",
       "title": "SMART Goals — The Framework That Actually Works",
-      "body": "A goal without a structure is just a wish. SMART goals are specific enough to act on:\n\n📌 Specific — \"Save $3,000\" not \"save more money.\" Specificity creates target clarity.\n\n📊 Measurable — You can track it with a number. \"Save $167/month\" not \"save a lot.\"\n\n✅ Achievable — Challenging but realistic given your actual income. Saving $3,000 in 3 months on a $200/month income is not achievable. 18 months is.\n\n❤️ Relevant — It matters to your real life and your real goals. A goal that doesn't connect to something you care about won't survive February.\n\n⏰ Time-Bound — Hard deadline. \"By graduation, May 1st\" — not \"someday.\"\n\nSMART goals work because they force your \\"someday\\" thinking into \\"Tuesday\\" thinking."
+      "body": "A goal without a structure is just a wish. SMART goals are specific enough to act on:\n\n📌 Specific — \"Save $3,000\" not \"save more money.\" Specificity creates target clarity.\n\n📊 Measurable — You can track it with a number. \"Save $167/month\" not \"save a lot.\"\n\n✅ Achievable — Challenging but realistic given your actual income. Saving $3,000 in 3 months on a $200/month income is not achievable. 18 months is.\n\n❤️ Relevant — It matters to your real life and your real goals. A goal that doesn't connect to something you care about won't survive February.\n\n⏰ Time-Bound — Hard deadline. \"By graduation, May 1st\" — not \"someday.\"\n\nSMART goals work because they force your \"someday\" thinking into \"Tuesday\" thinking."
     },
     {
       "type": "realcheck",
