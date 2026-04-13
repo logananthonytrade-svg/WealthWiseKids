@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useEffect, useRef, Component } from 'react';
+import React, { useEffect, useRef, useState, Component } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, Text, ActivityIndicator, StyleSheet, StatusBar, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,8 @@ import useAuthStore from './src/store/authStore';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import ParentNavigator from './src/navigation/ParentNavigator';
 import StudentNavigator from './src/navigation/StudentNavigator';
+import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
+import supabase from './src/lib/supabase';
 
 const queryClient = new QueryClient();
 
@@ -42,17 +44,33 @@ function SplashScreen() {
   );
 }
 
-// ─── Root app shell — decides which navigator to render ──────────────────────
+// ─── Root app shell — decides which navigator to render ──────────────
 function AppShell() {
   const { user, selectedChild, isLoading, initialize } = useAuthStore();
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     initialize().then((unsub) => { unsubscribe = unsub; });
-    return () => { unsubscribe?.(); };
+
+    // Listen for PASSWORD_RECOVERY event (deep link from reset email)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (isLoading) return <SplashScreen />;
+  // Deep link from password-reset email — show reset form regardless of auth state
+  if (isPasswordRecovery) {
+    return <ResetPasswordScreen onDone={() => setIsPasswordRecovery(false)} />;
+  }
   if (!user) return <AuthNavigator />;
   if (!selectedChild) return <ParentNavigator />;
   return <StudentNavigator />;

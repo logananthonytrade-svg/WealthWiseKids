@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -25,7 +26,8 @@ export default function ParentalConsentScreen({ navigation, route }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <LinearGradient colors={['#0D1F3C', '#091528']} style={styles.gradient}>
+      <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.icon}>🔒</Text>
       <Text style={styles.title}>Parental Consent Required</Text>
       <Text style={styles.subtitle}>
@@ -73,31 +75,35 @@ export default function ParentalConsentScreen({ navigation, route }: Props) {
       <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  gradient: { flex: 1 },
   content: { padding: 24, paddingTop: 60, paddingBottom: 48 },
   icon: { fontSize: 52, textAlign: 'center', marginBottom: 12 },
-  title: { fontSize: 24, fontWeight: '800', color: '#1B3A6B', textAlign: 'center', marginBottom: 12 },
-  subtitle: { fontSize: 14, color: '#444', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  bold: { fontWeight: '700', color: '#1B3A6B' },
+  title: { fontSize: 24, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 12 },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.6)', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  bold: { fontWeight: '700', color: '#F5C518' },
   card: {
-    backgroundColor: '#F0FFF4', borderRadius: 12, padding: 16, marginBottom: 16,
+    backgroundColor: 'rgba(39,174,96,0.08)',
+    borderWidth: 1, borderColor: 'rgba(39,174,96,0.2)',
+    borderRadius: 14, padding: 16, marginBottom: 16,
   },
-  noCard: { backgroundColor: '#FFF0F0' },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 },
+  noCard: { backgroundColor: 'rgba(198,40,40,0.08)', borderColor: 'rgba(198,40,40,0.2)' },
+  cardTitle: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.8)', marginBottom: 10 },
   bulletRow: { flexDirection: 'row', marginBottom: 8, gap: 8 },
-  bullet: { fontSize: 14, fontWeight: '800', color: '#27AE60', marginTop: 1 },
-  bulletText: { flex: 1, fontSize: 13, color: '#444', lineHeight: 20 },
-  dateText: { fontSize: 12, color: '#888', textAlign: 'center', marginBottom: 28 },
+  bullet: { fontSize: 14, fontWeight: '800', color: '#4ADE80', marginTop: 1 },
+  bulletText: { flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 20 },
+  dateText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: 28 },
   consentBtn: {
-    backgroundColor: '#1B3A6B', borderRadius: 50,
+    backgroundColor: '#F5C518', borderRadius: 50,
     paddingVertical: 16, alignItems: 'center', marginBottom: 14,
   },
-  consentBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  consentBtnText: { color: '#1B3A6B', fontSize: 16, fontWeight: '800' },
   cancelBtn: { alignItems: 'center', paddingVertical: 8 },
-  cancelText: { fontSize: 14, color: '#888' },
+  cancelText: { fontSize: 14, color: 'rgba(255,255,255,0.4)' },
 });
+
