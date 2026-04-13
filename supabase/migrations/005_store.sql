@@ -1,8 +1,8 @@
 ﻿-- Drop policies so this script is safe to re-run
 DO $$ BEGIN
-  DROP POLICY IF EXISTS "anyone can read coin_packs" ON coin_packs;
+  DROP POLICY IF EXISTS "anyone can read coin packs" ON coin_packs;
   DROP POLICY IF EXISTS "anyone can read store items" ON store_items;
-  DROP POLICY IF EXISTS "parent can read own purchases" ON item_purchases;
+  DROP POLICY IF EXISTS "parent can read own child item purchases" ON item_purchases;
   DROP POLICY IF EXISTS "user can view own coin pack purchases" ON coin_pack_purchases;
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
