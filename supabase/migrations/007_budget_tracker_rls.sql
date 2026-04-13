@@ -1,10 +1,17 @@
+﻿-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "budget_parent_write" ON budget_entries;
+  DROP POLICY IF EXISTS "budget_parent_delete" ON budget_entries;
+  DROP POLICY IF EXISTS "coin_tx_parent" ON coin_transactions;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 -- ============================================================
--- WealthWise Kids — Budget Tracker RLS Fixes
+-- WealthWise Kids â€” Budget Tracker RLS Fixes
 -- Run AFTER 006_school2_banking_101.sql
 -- Adds:
---   • budget_parent_write  — parent can INSERT budget entries for their children
---   • budget_parent_delete — parent can DELETE non-Plaid entries for their children
---   • coin_tx_parent       — parent can SELECT coin transaction history for their children
+--   â€¢ budget_parent_write  â€” parent can INSERT budget entries for their children
+--   â€¢ budget_parent_delete â€” parent can DELETE non-Plaid entries for their children
+--   â€¢ coin_tx_parent       â€” parent can SELECT coin transaction history for their children
 -- ============================================================
 
 -- Allow parents to manually add budget entries on behalf of their children.

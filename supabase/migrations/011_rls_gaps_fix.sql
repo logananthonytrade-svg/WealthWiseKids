@@ -1,5 +1,14 @@
+﻿-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "goals_parent_read" ON saving_goals;
+  DROP POLICY IF EXISTS "goals_parent_write" ON saving_goals;
+  DROP POLICY IF EXISTS "goals_parent_update" ON saving_goals;
+  DROP POLICY IF EXISTS "goals_parent_delete" ON saving_goals;
+  DROP POLICY IF EXISTS "budget_parent_update" ON budget_entries;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 -- ============================================================
--- WealthWise Kids — RLS Gap Fix (remaining tables)
+-- WealthWise Kids â€” RLS Gap Fix (remaining tables)
 -- Run AFTER 010_reward_claims.sql
 --
 -- This migration fixes the two remaining tables that still use
@@ -7,23 +16,23 @@
 -- parent-read policies for the parent reports screen.
 --
 -- Tables fixed:
---   • saving_goals  — write was completely broken (parent session model)
---   • budget_entries — UPDATE was missing from parent-session policies
+--   â€¢ saving_goals  â€” write was completely broken (parent session model)
+--   â€¢ budget_entries â€” UPDATE was missing from parent-session policies
 --
 -- RLS ownership matrix after this migration (complete):
--- ─────────────────────────────────────────────────────────────
+-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 --   Table                  | Client reads via        | Writes via
---   ───────────────────────────────────────────────────────────
+--   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 --   profiles               | auth.uid() = id         | trigger (signup)
 --   child_profiles         | parent_id = auth.uid()  | client (parent session)
 --   parental_consents      | parent_id = auth.uid()  | service_role (backend)
 --   subscriptions          | user_id = auth.uid()    | service_role (Stripe whk)
---   schools                | public                  | —
---   lessons                | public                  | —
---   quiz_questions         | public                  | —
+--   schools                | public                  | â€”
+--   lessons                | public                  | â€”
+--   quiz_questions         | public                  | â€”
 --   student_progress       | parent session (009)    | parent session (009)
 --   quiz_attempts          | parent session (009)    | parent session (009)
---   badges                 | public                  | —
+--   badges                 | public                  | â€”
 --   student_badges         | parent session (008)    | parent session (008)
 --   wealth_coins           | parent session (009)    | parent session (009)
 --   coin_transactions      | parent session (007)    | parent session (009)
@@ -32,8 +41,8 @@
 --   saving_goals           | parent session (THIS)   | parent session (THIS)
 --   quiz_best_scores       | parent session (004)    | service_role only
 --   school_coin_awards     | parent session (004)    | service_role only
---   coin_packs             | public                  | —
---   store_items            | public                  | —
+--   coin_packs             | public                  | â€”
+--   store_items            | public                  | â€”
 --   item_purchases         | parent session (005)    | service_role only
 --   coin_pack_purchases    | user_id = auth.uid()    | service_role only
 --   monthly_bonus_log      | none needed             | service_role only
@@ -45,7 +54,7 @@
 --   virtual_trades         | parent session (003v2)  | service_role only
 -- ============================================================
 
--- ── saving_goals — full parent-session fix ───────────────────
+-- â”€â”€ saving_goals â€” full parent-session fix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- The existing "goals_child" policy uses child_id = auth.uid()
 -- which ALWAYS fails because auth.uid() is the parent UUID.
 -- Drop it and replace with correct parent-session policies.
@@ -77,7 +86,7 @@ CREATE POLICY "goals_parent_delete" ON saving_goals
   );
 
 
--- ── budget_entries — add missing parent UPDATE policy ────────
+-- â”€â”€ budget_entries â€” add missing parent UPDATE policy â”€â”€â”€â”€â”€â”€â”€â”€
 -- 007_budget_tracker_rls.sql added INSERT and DELETE for parents,
 -- but UPDATE was omitted. Without it, editing an existing budget
 -- entry silently fails.
@@ -89,7 +98,7 @@ CREATE POLICY "budget_parent_update" ON budget_entries
   );
 
 
--- ── Verification query (run manually to confirm) ─────────────
+-- â”€â”€ Verification query (run manually to confirm) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- SELECT tablename, policyname, cmd
 -- FROM pg_policies
 -- WHERE tablename IN (

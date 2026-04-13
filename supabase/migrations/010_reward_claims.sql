@@ -1,5 +1,10 @@
+﻿-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "reward_claims_parent" ON reward_claims;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 -- ============================================================
--- WealthWise Kids — Reward Claims (idempotency table)
+-- WealthWise Kids â€” Reward Claims (idempotency table)
 -- Run after 009_rls_parent_session_fix.sql
 --
 -- reward_claims stores one row per (child, reward_key) pair.
@@ -35,4 +40,4 @@ CREATE POLICY "reward_claims_parent_read" ON reward_claims
     child_id IN (SELECT id FROM child_profiles WHERE parent_id = auth.uid())
   );
 
--- Backend service-role key bypasses RLS for all writes — no client write policy needed.
+-- Backend service-role key bypasses RLS for all writes â€” no client write policy needed.

@@ -1,11 +1,19 @@
--- ── 005_store.sql ─────────────────────────────────────────────────────────
+﻿-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "anyone can read coin_packs" ON coin_packs;
+  DROP POLICY IF EXISTS "anyone can read store items" ON store_items;
+  DROP POLICY IF EXISTS "parent can read own purchases" ON item_purchases;
+  DROP POLICY IF EXISTS "user can view own coin pack purchases" ON coin_pack_purchases;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+-- â”€â”€ 005_store.sql â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- Coin packs, store items, item ownership, coin purchase log,
 -- and monthly premium bonus idempotency table.
 -- All writes happen through the backend service-role client.
 -- Clients get SELECT-only access to their own rows.
--- ─────────────────────────────────────────────────────────────────────────
+-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
--- ── Coin packs (static config — seeded here) ─────────────────────────────
+-- â”€â”€ Coin packs (static config â€” seeded here) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CREATE TABLE IF NOT EXISTS coin_packs (
   id           SERIAL PRIMARY KEY,
   name         TEXT         NOT NULL,
@@ -22,12 +30,12 @@ INSERT INTO coin_packs (name, coins, price_usd, badge_label, order_number) VALUE
   ('Mega',       5500, 44.99, NULL,         4)
 ON CONFLICT DO NOTHING;
 
--- Public read — no sensitive data
+-- Public read â€” no sensitive data
 ALTER TABLE coin_packs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anyone can read coin packs"
   ON coin_packs FOR SELECT USING (true);
 
--- ── Store items (static config — seeded here) ─────────────────────────────
+-- â”€â”€ Store items (static config â€” seeded here) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CREATE TABLE IF NOT EXISTS store_items (
   id           SERIAL  PRIMARY KEY,
   name         TEXT    NOT NULL,
@@ -42,47 +50,47 @@ CREATE TABLE IF NOT EXISTS store_items (
 INSERT INTO store_items (name, description, icon, coin_cost, feature_key, order_number) VALUES
   ('Budget Tracker',
    'Connect your bank, Venmo, Zelle & Cash App to track all spending in one place.',
-   '🏦', 750,  'budget_tracker',     1),
+   'ðŸ¦', 750,  'budget_tracker',     1),
 
   ('Custom Themes & Avatars',
    'Personalise your profile with exclusive colour themes and character avatars.',
-   '🎨', 300,  'custom_themes',      2),
+   'ðŸŽ¨', 300,  'custom_themes',      2),
 
   ('Study Timer + Pomodoro',
    'Beat procrastination with a built-in Pomodoro timer and focus-session tracker.',
-   '⏱️', 450,  'study_timer',        3),
+   'â±ï¸', 450,  'study_timer',        3),
 
   ('Finance Goal Planner',
    'Set savings targets, track milestones, and celebrate when you hit your goals.',
-   '🎯', 550,  'goal_planner',       4),
+   'ðŸŽ¯', 550,  'goal_planner',       4),
 
   ('Ad Removal',
    'Remove all ads from the app for a completely distraction-free learning experience.',
-   '🚫', 650,  'ad_removal',         5),
+   'ðŸš«', 650,  'ad_removal',         5),
 
   ('Advanced Analytics',
    'Unlock deep charts and insights on spending, savings rate, and financial habits.',
-   '📊', 850,  'analytics',          6),
+   'ðŸ“Š', 850,  'analytics',          6),
 
   ('School Skip',
-   'Skip one school and jump straight to the next — use wisely, there is only one!',
-   '⚡', 950,  'school_skip',        7),
+   'Skip one school and jump straight to the next â€” use wisely, there is only one!',
+   'âš¡', 950,  'school_skip',        7),
 
   ('Premium Productivity Suite',
    'All study tools in one: goal planner, timer, habit tracker, and finance journal.',
-   '💼', 1200, 'productivity_suite', 8),
+   'ðŸ’¼', 1200, 'productivity_suite', 8),
 
   ('Lifetime VIP Badge',
-   'A permanent gold badge next to your name — show the world you are a WealthWise legend.',
-   '👑', 1500, 'vip_badge',          9)
+   'A permanent gold badge next to your name â€” show the world you are a WealthWise legend.',
+   'ðŸ‘‘', 1500, 'vip_badge',          9)
 ON CONFLICT (feature_key) DO NOTHING;
 
--- Public read — item definitions are not sensitive
+-- Public read â€” item definitions are not sensitive
 ALTER TABLE store_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anyone can read store items"
   ON store_items FOR SELECT USING (true);
 
--- ── Item ownership (permanent, one row per child × item) ──────────────────
+-- â”€â”€ Item ownership (permanent, one row per child Ã— item) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CREATE TABLE IF NOT EXISTS item_purchases (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   child_id     UUID        NOT NULL REFERENCES child_profiles(id) ON DELETE CASCADE,
@@ -101,9 +109,9 @@ CREATE POLICY "parent can read own child item purchases"
       SELECT id FROM child_profiles WHERE parent_id = auth.uid()
     )
   );
--- No INSERT/UPDATE policy — only the service-role backend can write here
+-- No INSERT/UPDATE policy â€” only the service-role backend can write here
 
--- ── Coin pack purchase log ─────────────────────────────────────────────────
+-- â”€â”€ Coin pack purchase log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CREATE TABLE IF NOT EXISTS coin_pack_purchases (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id           UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -120,7 +128,7 @@ CREATE POLICY "user can view own coin pack purchases"
   ON coin_pack_purchases FOR SELECT
   USING (user_id = auth.uid());
 
--- ── Monthly premium bonus log ──────────────────────────────────────────────
+-- â”€â”€ Monthly premium bonus log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- Prevents awarding the 150-coin monthly bonus more than once per child per month.
 CREATE TABLE IF NOT EXISTS monthly_bonus_log (
   id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -131,4 +139,4 @@ CREATE TABLE IF NOT EXISTS monthly_bonus_log (
 );
 
 ALTER TABLE monthly_bonus_log ENABLE ROW LEVEL SECURITY;
--- No client read needed — server-only table
+-- No client read needed â€” server-only table
