@@ -2,16 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const helmet  = require('helmet');
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./lib/supabaseAdmin');
 const { authLimiter, rewardLimiter, storeLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
-
-// ─── Supabase admin client ─────────────────────────────────────────────────
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 // ─── Middleware ────────────────────────────────────────────────────────────
 app.use(helmet());

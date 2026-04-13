@@ -1,6 +1,6 @@
 ﻿const express  = require('express');
 const router   = express.Router();
-const { supabase } = require('../server');
+const { supabase } = require('../lib/supabaseAdmin');
 const { isUUID, isPosInt, validateBody, validateUUIDParam } = require('../middleware/validate');
 
 // ── Shared helpers ─────────────────────────────────────────────────────────

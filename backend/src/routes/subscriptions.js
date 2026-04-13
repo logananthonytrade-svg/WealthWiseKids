@@ -1,7 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const Stripe   = require('stripe');
-const { supabase } = require('../server');
+const { supabase } = require('../lib/supabaseAdmin');
 const { isUUID } = require('../middleware/validate');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
