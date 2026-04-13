@@ -38,7 +38,7 @@ export default function CreateChildProfileScreen() {
       return;
     }
     if (age === null || age < 5 || age > 18) {
-      setError('Please enter a valid birthdate for a child ages 5–18.');
+      setError('Please enter a valid birthdate for a child ages 5ï¿½18.');
       return;
     }
     if (age < 13 && !consentGiven) {
@@ -147,7 +147,7 @@ export default function CreateChildProfileScreen() {
             onPress={handleSave}
             disabled={loading}
           >
-            <Text style={styles.primaryBtnText}>{loading ? 'Creating profile…' : 'Create Profile'}</Text>
+            <Text style={styles.primaryBtnText}>{loading ? 'Creating profileï¿½' : 'Create Profile'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

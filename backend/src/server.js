@@ -29,6 +29,7 @@ app.get('/health', (req, res) => {
 app.use('/auth',          require('./routes/auth'));
 app.use('/subscriptions', require('./routes/subscriptions'));
 app.use('/schools',       require('./routes/schools'));
+app.use('/rewards',       require('./routes/rewards'));
 app.use('/store',         require('./routes/store'));
 app.use('/trading',       require('./routes/trading'));
 

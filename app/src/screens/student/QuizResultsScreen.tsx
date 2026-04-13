@@ -11,6 +11,7 @@ import useAuthStore, { type AuthState } from '../../store/authStore';
 import { checkAndAwardBadges, checkAndAwardPerfectCountBadges } from '../../utils/badgeUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
+import { awardCoins } from '../../utils/rewardUtils';
 
 type Props = {
   navigation: StackNavigationProp<StudentStackParamList, 'QuizResults'>;
@@ -59,6 +60,16 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
     });
 
     if (passed) {
+      // ── Coin awards (backend-gated, idempotent) ─────────────────
+      // 25 coins for passing the school quiz (one-time per school)
+      await awardCoins(childId, 'quiz_pass', { school_id: schoolId });
+      // 200 coins for completing the full school (same trigger, separate reward_key)
+      await awardCoins(childId, 'school_complete', { school_id: schoolId });
+      // 50 bonus coins for a perfect score (one-time per school)
+      if (score === 100) {
+        await awardCoins(childId, 'quiz_perfect', { school_id: schoolId });
+      }
+
       // 2. Award graduation badge
       const allBadges: BadgeRecord[] = [];
       const gradBadges = await checkAndAwardBadges(childId, 'school_complete', String(schoolId));

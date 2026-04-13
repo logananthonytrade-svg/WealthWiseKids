@@ -10,6 +10,7 @@ import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import { checkAndAwardBadges, checkAndAwardLessonBadges, checkAndAwardStreakBadges, checkAndAwardPerfectCountBadges } from '../../utils/badgeUtils';
 import { updateStreak } from '../../utils/streakUtils';
+import { awardCoins } from '../../utils/rewardUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
 
@@ -172,6 +173,12 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
     }, { onConflict: 'child_id,lesson_id' });
 
     await updateStreak(childId);
+
+    // ── Coin awards (backend-gated, idempotent) ──────────────────
+    // 10 coins for completing this chapter (one-time per lesson)
+    await awardCoins(childId, 'chapter_complete', { lesson_id: lessonId });
+    // 5 × streak-multiplier coins for first activity of the day
+    await awardCoins(childId, 'daily_streak');
 
     const badges: BadgeRecord[] = [];
 
