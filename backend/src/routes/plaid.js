@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { PlaidApi, PlaidEnvironments, Configuration, Products, CountryCode } = require('plaid');
-const { supabase } = require('../server');
+const { supabase } = require('../lib/supabaseAdmin');
 
 // ─── Plaid client setup ───────────────────────────────────────────────────────
 const plaidEnv = process.env.PLAID_ENV === 'production'

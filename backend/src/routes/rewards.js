@@ -1,6 +1,6 @@
 const express  = require('express');
 const router   = express.Router();
-const { supabase } = require('../server');
+const { supabase } = require('../lib/supabaseAdmin');
 const { isUUID } = require('../middleware/validate');
 
 // ─── Streak multiplier table ──────────────────────────────────
