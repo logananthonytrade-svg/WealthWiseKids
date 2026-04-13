@@ -1,5 +1,0 @@
--- ============================================================
--- 002_bot_tables.sql -- VOIDED in v1.08
--- The futures trading bot has been removed from WealthWiseKids.
--- This file is a no-op placeholder to preserve migration sequence numbering.
--- ============================================================
