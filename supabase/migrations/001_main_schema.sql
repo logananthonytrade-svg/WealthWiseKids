@@ -158,7 +158,8 @@ CREATE TABLE IF NOT EXISTS lessons (
   lesson_number  INTEGER NOT NULL,
   lesson_type    TEXT NOT NULL DEFAULT 'content' CHECK (lesson_type IN ('content','did_you_know','activity')),
   fun_fact       TEXT,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (school_id, lesson_number)
 );
 CREATE INDEX IF NOT EXISTS idx_lessons_school ON lessons(school_id, lesson_number);
 ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
@@ -388,6 +389,11 @@ INSERT INTO schools (id, title, description, order_number, icon_name, is_premium
 ON CONFLICT (id) DO NOTHING;
 
 -- School 1 Lessons (7 lessons)
+-- Remove any duplicates from aborted runs before inserting
+DELETE FROM lessons l1 USING lessons l2
+  WHERE l1.id > l2.id AND l1.school_id = l2.school_id AND l1.lesson_number = l2.lesson_number;
+ALTER TABLE lessons DROP CONSTRAINT IF EXISTS lessons_school_id_lesson_number_key;
+ALTER TABLE lessons ADD CONSTRAINT lessons_school_id_lesson_number_key UNIQUE (school_id, lesson_number);
 INSERT INTO lessons (school_id, title, content, lesson_number, lesson_type, fun_fact) VALUES
 (1,
  'What Is Money?',
@@ -530,7 +536,8 @@ THE POWER OF AUTOMATION: Once you set a savings goal, make it automatic. Set up 
 
 YOUR ASSIGNMENT: Write down three financial goals right now — one in each time category. Make them SMART. Then calculate how much you need to save each week to reach each one.',
  7, 'content',
- 'Research shows that people who write down their goals are 42% more likely to achieve them than those who just think about their goals. The act of writing makes it real.');
+ 'Research shows that people who write down their goals are 42% more likely to achieve them than those who just think about their goals. The act of writing makes it real.')
+ON CONFLICT (school_id, lesson_number) DO NOTHING;
 
 -- School 1 Quiz Questions (10 questions)
 INSERT INTO quiz_questions (school_id, question_text, question_type, options, correct_answer, explanation, difficulty, order_number) VALUES
@@ -612,7 +619,8 @@ INSERT INTO quiz_questions (school_id, question_text, question_type, options, co
  '["Simple, Manageable, Adaptable, Reasonable, Timely", "Specific, Measurable, Achievable, Relevant, Time-bound", "Saved, Money, Allocated, Resources, Together", "Spending, Managing, Accounting, Reviewing, Tracking"]'::jsonb,
  'Specific, Measurable, Achievable, Relevant, Time-bound',
  'SMART is a goal-setting framework: Specific (clear and detailed), Measurable (trackable with numbers), Achievable (realistic), Relevant (matters to you), and Time-bound (has a deadline). Goals with all five qualities are far more likely to be achieved.',
- 'medium', 10);
+ 'medium', 10)
+ON CONFLICT DO NOTHING;
 
 -- Badges (MVP set)
 INSERT INTO badges (name, description, icon_name, rarity, trigger_type, trigger_value) VALUES
