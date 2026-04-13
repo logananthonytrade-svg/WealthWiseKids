@@ -16,9 +16,8 @@ const supabase = createClient(
 // ─── Middleware ────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
-// Raw body needed for Stripe webhook signature verification
+// Raw body needed for Stripe subscription webhook signature verification
 app.use('/subscriptions/webhook', express.raw({ type: 'application/json' }));
-app.use('/store/coins-webhook',   express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 // ─── Health check ─────────────────────────────────────────────────────────
@@ -32,7 +31,6 @@ app.use('/subscriptions', authLimiter,   require('./routes/subscriptions'));
 app.use('/schools',                      require('./routes/schools'));
 app.use('/rewards',       rewardLimiter, require('./routes/rewards'));
 app.use('/store',         storeLimiter,  require('./routes/store'));
-app.use('/trading',                      require('./routes/trading'));
 
 // ─── Error handler ────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

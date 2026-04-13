@@ -113,11 +113,8 @@ export default function StoreScreen() {
     if (balance < item.coin_cost) {
       Alert.alert(
         'Not enough coins',
-        `You need ${item.coin_cost.toLocaleString()} coins but only have ${balance.toLocaleString()}.\n\nBuy a coin pack or earn more by completing lessons!`,
-        [
-          { text: 'Buy Coins', onPress: () => setActiveTab('coins') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
+        `You need ${item.coin_cost.toLocaleString()} coins but only have ${balance.toLocaleString()}.\n\nEarn more coins by completing lessons and quizzes!`,
+        [{ text: 'OK', style: 'cancel' }]
       );
       return;
     }

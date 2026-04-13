@@ -1,10 +1,7 @@
-const express  = require('express');
+﻿const express  = require('express');
 const router   = express.Router();
-const Stripe   = require('stripe');
 const { supabase } = require('../server');
 const { isUUID, isPosInt, validateBody, validateUUIDParam } = require('../middleware/validate');
-
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ── Shared helpers ─────────────────────────────────────────────────────────
 
@@ -55,9 +52,8 @@ router.get('/catalog/:child_id', validateUUIDParam('child_id'), async (req, res)
   const ok = await verifyParentOwnsChild(user.id, child_id, res);
   if (!ok) return;
 
-  const [itemsRes, packsRes, balanceRes, ownedRes] = await Promise.all([
+  const [itemsRes, balanceRes, ownedRes] = await Promise.all([
     supabase.from('store_items').select('*').eq('is_active', true).order('order_number'),
-    supabase.from('coin_packs').select('*').order('order_number'),
     supabase.from('wealth_coins').select('balance').eq('child_id', child_id).maybeSingle(),
     supabase.from('item_purchases').select('item_id').eq('child_id', child_id),
   ]);
@@ -76,7 +72,6 @@ router.get('/catalog/:child_id', validateUUIDParam('child_id'), async (req, res)
   res.json({
     balance: balanceRes.data?.balance ?? 0,
     items,
-    packs: packsRes.data ?? [],
   });
 });
 
@@ -189,187 +184,7 @@ router.post('/buy-item', async (req, res) => {
   res.json({ new_balance: newBalance, item: { ...item, owned: true } });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-/**
- * POST /store/buy-coins
- * Creates a Stripe Checkout session (mode: 'payment') for a coin pack.
- * The webhook (/store/coins-webhook) awards the coins after confirmed payment.
- *
- * Auth:  Bearer <supabase_jwt>
- * Body:  { child_id: UUID, pack_id: number, success_url?, cancel_url? }
- * Returns: { url: string, session_id: string }
- */
-router.post('/buy-coins', async (req, res) => {
-  const user = await authenticate(req, res);
-  if (!user) return;
 
-  const { child_id, pack_id, success_url, cancel_url } = req.body;
-  const validErr = validateBody(req.body, [
-    { field: 'child_id', type: 'uuid' },
-    { field: 'pack_id',  type: 'posInt' },
-  ]);
-  if (validErr) return res.status(400).json({ error: validErr });
-
-  // Reject unexpected URL shapes to prevent open-redirect abuse
-  const URL_RE = /^https?:\/\//;
-  if (success_url && !URL_RE.test(success_url)) {
-    return res.status(400).json({ error: 'success_url must be a valid URL.' });
-  }
-  if (cancel_url && !URL_RE.test(cancel_url)) {
-    return res.status(400).json({ error: 'cancel_url must be a valid URL.' });
-  }
-
-  const ok = await verifyParentOwnsChild(user.id, child_id, res);
-  if (!ok) return;
-
-  // Load pack
-  const { data: pack } = await supabase
-    .from('coin_packs')
-    .select('*')
-    .eq('id', pack_id)
-    .maybeSingle();
-
-  if (!pack) return res.status(404).json({ error: 'Coin pack not found.' });
-
-  // Get or reuse existing Stripe customer
-  const { data: subRow } = await supabase
-    .from('subscriptions')
-    .select('stripe_customer_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  let customerId = subRow?.stripe_customer_id;
-  if (!customerId) {
-    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(user.id);
-    const customer = await stripe.customers.create({
-      email: authUser?.email,
-      metadata: { supabase_user_id: user.id },
-    });
-    customerId = customer.id;
-  }
-
-  try {
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      mode: 'payment',
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          unit_amount: Math.round(pack.price_usd * 100),
-          product_data: {
-            name: `WealthWiseKids — ${pack.name} Coin Pack`,
-            description: `${pack.coins.toLocaleString()} WealthCoins added to ${child_id}'s balance`,
-          },
-        },
-        quantity: 1,
-      }],
-      metadata: {
-        type:     'coin_pack',
-        user_id:  user.id,
-        child_id,
-        pack_id:  String(pack.id),
-        coins:    String(pack.coins),
-      },
-      success_url: success_url ?? `${process.env.APP_URL ?? 'https://wealthwisekids.app'}/coins-success`,
-      cancel_url:  cancel_url  ?? `${process.env.APP_URL ?? 'https://wealthwisekids.app'}/coins-cancel`,
-    });
-
-    res.json({ url: session.url, session_id: session.id });
-  } catch (err) {
-    console.error('[store/buy-coins] Stripe checkout error', {
-      user_id: user.id, child_id, pack_id, error: err.message,
-    });
-    res.status(500).json({ error: 'Failed to create checkout session.' });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-/**
- * POST /store/coins-webhook
- * Stripe fires checkout.session.completed when the payment succeeds.
- * Idempotent: keyed on stripe payment_intent — safe to retry.
- *
- * NOTE: server.js must register raw body for this path BEFORE express.json().
- * Uses STRIPE_COINS_WEBHOOK_SECRET env var (separate from subscription webhook).
- */
-router.post('/coins-webhook', async (req, res) => {
-  const sig    = req.headers['stripe-signature'];
-  const secret = process.env.STRIPE_COINS_WEBHOOK_SECRET;
-
-  if (!secret) {
-    console.error('[store/coins-webhook] STRIPE_COINS_WEBHOOK_SECRET is not set');
-    return res.status(500).json({ error: 'Webhook secret not configured.' });
-  }
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, secret);
-  } catch (err) {
-    console.error('[store/coins-webhook] signature invalid', { error: err.message });
-    return res.status(400).json({ error: 'Webhook signature invalid.' });
-  }
-
-  // Only handle completed payment checkouts
-  if (event.type !== 'checkout.session.completed') {
-    return res.json({ received: true });
-  }
-
-  const session = event.data.object;
-  if (session.payment_status !== 'paid' || session.metadata?.type !== 'coin_pack') {
-    return res.json({ received: true });
-  }
-
-  const { user_id, child_id, pack_id, coins } = session.metadata;
-  if (!user_id || !child_id || !coins) {
-    console.error('Coins webhook: missing metadata', session.metadata);
-    return res.status(400).json({ error: 'Missing metadata.' });
-  }
-
-  const coinsAmount   = parseInt(coins, 10);
-  const paymentIntent = session.payment_intent;
-
-  // Idempotency check — stripe_payment_id has UNIQUE constraint
-  const { data: already } = await supabase
-    .from('coin_pack_purchases')
-    .select('id')
-    .eq('stripe_payment_id', paymentIntent)
-    .maybeSingle();
-
-  if (already) return res.json({ received: true }); // already processed
-
-  // Log the purchase
-  await supabase.from('coin_pack_purchases').insert({
-    user_id,
-    child_id,
-    pack_id:           parseInt(pack_id, 10),
-    coins_granted:     coinsAmount,
-    stripe_payment_id: paymentIntent,
-  });
-
-  // Log the coin transaction
-  await supabase.from('coin_transactions').insert({
-    child_id,
-    amount: coinsAmount,
-    reason: `Purchased coin pack (${coinsAmount.toLocaleString()} coins)`,
-  });
-
-  // Increment wallet balance
-  const { data: walletRow } = await supabase
-    .from('wealth_coins')
-    .select('balance')
-    .eq('child_id', child_id)
-    .maybeSingle();
-
-  const newBalance = (walletRow?.balance ?? 0) + coinsAmount;
-  await supabase.from('wealth_coins').upsert(
-    { child_id, balance: newBalance, last_updated: new Date().toISOString() },
-    { onConflict: 'child_id' }
-  );
-
-  console.log(`[store] Awarded ${coinsAmount} coins to child ${child_id} via pack purchase ${paymentIntent}`);
-  res.json({ received: true });
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 /**
