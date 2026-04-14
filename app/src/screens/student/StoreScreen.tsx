@@ -1,28 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import { useSubscription } from '../../hooks/useSubscription';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
+import CoinAwardPop from '../../components/CoinAwardPop';
+import { hapticTap, hapticSuccess, hapticError } from '../../utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-type StoreTab = 'shop' | 'coins' | 'tools';
-
-interface CoinPack {
-  id:           number;
-  name:         string;
-  coins:        number;
-  price_usd:    number;
-  badge_label:  string | null;
-  order_number: number;
-}
+type StoreTab = 'storefront' | 'earn' | 'mytools' | 'deals';
 
 interface StoreItem {
   id:           number;
@@ -40,7 +32,14 @@ interface StoreItem {
 function openTool(featureKey: string, navigation: StackNavigationProp<StudentStackParamList>) {
   switch (featureKey) {
     case 'budget_tracker':
-      navigation.navigate('ConnectBank');
+      navigation.navigate('BudgetTracker');
+      break;
+    case 'savings_calculator':
+    case 'savings_goals':
+      navigation.navigate('SavingsCalculator');
+      break;
+    case 'spending_analyzer':
+      navigation.navigate('SpendingAnalyzer');
       break;
     default:
       Alert.alert('Coming Soon 🔨', 'This tool is under development. Check back soon!');
@@ -52,13 +51,13 @@ export default function StoreScreen() {
   const { selectedChild } = useAuthStore();
   const { isActive }      = useSubscription();
 
-  const [activeTab,    setActiveTab]    = useState<StoreTab>('shop');
+  const [activeTab,    setActiveTab]    = useState<StoreTab>('storefront');
   const [balance,      setBalance]      = useState(0);
-  const [packs,        setPacks]        = useState<CoinPack[]>([]);
   const [items,        setItems]        = useState<StoreItem[]>([]);
   const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
   const [buyingItemId, setBuyingItemId] = useState<number | null>(null);
-  const [buyingPackId, setBuyingPackId] = useState<number | null>(null);
+  const [coinPop, setCoinPop] = useState({ amount: 0, nonce: 0 });
 
   useEffect(() => {
     loadCatalog();
@@ -78,7 +77,6 @@ export default function StoreScreen() {
       if (res.ok) {
         const data = await res.json();
         setBalance(data.balance ?? 0);
-        setPacks(data.packs ?? []);
         setItems(data.items ?? []);
       }
     } catch (err) {
@@ -101,6 +99,8 @@ export default function StoreScreen() {
         const data = await res.json();
         if (data.coins_awarded > 0) {
           setBalance((b) => b + data.coins_awarded);
+          setCoinPop({ amount: data.coins_awarded, nonce: Date.now() });
+          hapticSuccess();
           Alert.alert(
             '💰 Monthly Bonus!',
             `${data.coins_awarded} WealthCoins added — your Premium monthly reward!`
@@ -112,18 +112,22 @@ export default function StoreScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCatalog();
+    setRefreshing(false);
+  };
+
   // ── Purchase handlers ────────────────────────────────────────
   const handleBuyItem = (item: StoreItem) => {
+    hapticTap();
     if (item.owned) return;
 
     if (balance < item.coin_cost) {
       Alert.alert(
         'Not enough coins',
-        `You need ${item.coin_cost.toLocaleString()} coins but only have ${balance.toLocaleString()}.\n\nBuy a coin pack or earn more by completing lessons!`,
-        [
-          { text: 'Buy Coins', onPress: () => setActiveTab('coins') },
-          { text: 'Cancel', style: 'cancel' },
-        ]
+        `You need ${item.coin_cost.toLocaleString()} coins but only have ${balance.toLocaleString()}.\n\nEarn more coins by completing lessons and quizzes!`,
+        [{ text: 'OK', style: 'cancel' }]
       );
       return;
     }
@@ -145,13 +149,16 @@ export default function StoreScreen() {
               });
               const data = await res.json();
               if (res.ok) {
+                hapticSuccess();
                 setBalance(data.new_balance);
                 setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, owned: true } : i));
                 Alert.alert('✅ Purchased!', `${item.name} is now in "My Tools".`);
               } else {
+                hapticError();
                 Alert.alert('Purchase failed', data.error ?? 'Please try again.');
               }
             } catch {
+              hapticError();
               Alert.alert('Error', 'Network error. Please try again.');
             } finally {
               setBuyingItemId(null);
@@ -163,48 +170,25 @@ export default function StoreScreen() {
     );
   };
 
-  const handleBuyCoins = async (pack: CoinPack) => {
-    if (!selectedChild) return;
-    setBuyingPackId(pack.id);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${API_URL}/store/buy-coins`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-        body:    JSON.stringify({ child_id: selectedChild.id, pack_id: pack.id }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        await WebBrowser.openBrowserAsync(data.url);
-        // Refresh balance after returning — coins are awarded via webhook
-        await loadCatalog();
-      } else {
-        Alert.alert('Error', data.error ?? 'Could not start checkout.');
-      }
-    } catch {
-      Alert.alert('Error', 'Network error. Please try again.');
-    } finally {
-      setBuyingPackId(null);
-    }
-  };
-
   // ── No child selected ────────────────────────────────────────
   if (!selectedChild) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>👤</Text>
           <Text style={styles.emptyTitle}>No profile selected</Text>
           <Text style={styles.emptyDesc}>Select a child profile to access the store.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const ownedTools = items.filter((i) => i.owned);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
 
       {/* ── Balance header ─────────────────────────────────────── */}
       <View style={styles.header}>
@@ -219,17 +203,18 @@ export default function StoreScreen() {
 
       {/* ── Tab bar ────────────────────────────────────────────── */}
       <View style={styles.tabBar}>
-        {(['shop', 'coins', 'tools'] as StoreTab[]).map((tab) => {
+        {(['storefront', 'earn', 'mytools', 'deals'] as StoreTab[]).map((tab) => {
           const labels: Record<StoreTab, string> = {
-            shop:  '🛍  Shop',
-            coins: '💎  Buy Coins',
-            tools: '🔧  My Tools',
+            storefront: '🛍  Store',
+            earn:       '⭐  Earn',
+            mytools:    '🔧  Tools',
+            deals:      '🤝  Deals',
           };
           return (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => { hapticTap(); setActiveTab(tab); }}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                 {labels[tab]}
@@ -240,18 +225,30 @@ export default function StoreScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#1B3A6B" />
+        <View style={styles.scrollContent}>
+          <View style={[styles.skeletonBar, { width: '60%', alignSelf: 'center', marginBottom: 18 }]} />
+          <View style={[styles.skeletonCard, { height: 118, marginBottom: 12 }]} />
+          <View style={[styles.skeletonCard, { height: 118, marginBottom: 12 }]} />
+          <View style={[styles.skeletonCard, { height: 118 }]} />
         </View>
       ) : (
         <>
-          {/* ════════════════════ SHOP TAB ════════════════════ */}
-          {activeTab === 'shop' && (
+          {/* ══════════════════ STOREFRONT TAB ════════════════ */}
+          {activeTab === 'storefront' && (
             <ScrollView
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F0A500" />}
             >
               <Text style={styles.sectionHint}>Permanent unlocks — yours forever once purchased</Text>
+
+              {items.length === 0 && (
+                <View style={styles.toolsEmpty}>
+                  <Text style={styles.emptyIcon}>🛍️</Text>
+                  <Text style={styles.emptyTitle}>Store is empty</Text>
+                  <Text style={styles.emptyDesc}>No tools are available right now. Pull down to refresh later.</Text>
+                </View>
+              )}
 
               {items.map((item) => (
                 <View key={item.id} style={[styles.shopCard, item.owned && styles.shopCardOwned]}>
@@ -292,7 +289,7 @@ export default function StoreScreen() {
                       {item.owned && (
                         <TouchableOpacity
                           style={styles.openBtnSmall}
-                          onPress={() => openTool(item.feature_key, navigation)}
+                          onPress={() => { hapticTap(); openTool(item.feature_key, navigation); }}
                         >
                           <Text style={styles.openBtnSmallText}>Open →</Text>
                         </TouchableOpacity>
@@ -304,76 +301,24 @@ export default function StoreScreen() {
             </ScrollView>
           )}
 
-          {/* ═══════════════════ BUY COINS TAB ═══════════════ */}
-          {activeTab === 'coins' && (
+          {/* ═══════════════════ EARN COINS TAB ══════════════ */}
+          {activeTab === 'earn' && (
             <ScrollView
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              {/* Premium bonus banner */}
-              {isActive && (
-                <View style={styles.premiumBanner}>
-                  <Text style={styles.premiumBannerIcon}>⭐</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.premiumBannerTitle}>Premium Monthly Bonus</Text>
-                    <Text style={styles.premiumBannerSub}>150 coins added automatically every month</Text>
-                  </View>
-                </View>
-              )}
-
-              <Text style={styles.sectionHint}>One-time purchase · coins never expire</Text>
-
-              {packs.map((pack) => {
-                const cppCents = ((pack.price_usd / pack.coins) * 100).toFixed(1);
-                const isLoading = buyingPackId === pack.id;
-                const isPopular = pack.badge_label === 'Popular';
-                const isBestVal = pack.badge_label === 'Best Value';
-
-                return (
-                  <TouchableOpacity
-                    key={pack.id}
-                    style={[
-                      styles.packCard,
-                      isPopular && styles.packCardPopular,
-                      isBestVal && styles.packCardBestVal,
-                    ]}
-                    onPress={() => handleBuyCoins(pack)}
-                    disabled={isLoading}
-                    activeOpacity={0.85}
-                  >
-                    {pack.badge_label && (
-                      <View style={[styles.packBadge, isBestVal && styles.packBadgeBestVal]}>
-                        <Text style={styles.packBadgeText}>
-                          {isPopular ? '🔥 Popular' : '💎 Best Value'}
-                        </Text>
-                      </View>
-                    )}
-                    <View style={styles.packRow}>
-                      <View>
-                        <Text style={styles.packName}>{pack.name}</Text>
-                        <Text style={styles.packCoins}>💰 {pack.coins.toLocaleString()} coins</Text>
-                        <Text style={styles.packCpp}>~{cppCents}¢ per coin</Text>
-                      </View>
-                      {isLoading ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <View style={styles.packPricePill}>
-                          <Text style={styles.packPriceText}>${pack.price_usd.toFixed(2)}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <Text style={styles.stripeNote}>
-                🔒 Secure checkout via Stripe. Coins appear after payment confirmation.
-              </Text>
+              <View style={styles.toolsEmpty}>
+                <Text style={styles.emptyIcon}>⭐</Text>
+                <Text style={styles.emptyTitle}>Earn WealthCoins</Text>
+                <Text style={styles.emptyDesc}>
+                  Complete lessons, ace quizzes, and keep your streak alive to earn coins — no purchases needed.
+                </Text>
+              </View>
             </ScrollView>
           )}
 
           {/* ════════════════════ MY TOOLS TAB ════════════════ */}
-          {activeTab === 'tools' && (
+          {activeTab === 'mytools' && (
             <ScrollView
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
@@ -385,7 +330,7 @@ export default function StoreScreen() {
                   <Text style={styles.emptyDesc}>
                     {"You haven't bought any tools yet. Check out the Shop to unlock powerful features like the Budget Tracker!"}
                   </Text>
-                  <TouchableOpacity style={styles.shopCTA} onPress={() => setActiveTab('shop')}>
+                  <TouchableOpacity style={styles.shopCTA} onPress={() => { hapticTap(); setActiveTab('storefront'); }}>
                     <Text style={styles.shopCTAText}>Browse the Shop →</Text>
                   </TouchableOpacity>
                 </View>
@@ -399,7 +344,7 @@ export default function StoreScreen() {
                     </View>
                     <TouchableOpacity
                       style={styles.openBtn}
-                      onPress={() => openTool(tool.feature_key, navigation)}
+                      onPress={() => { hapticTap(); openTool(tool.feature_key, navigation); }}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.openBtnText}>Open</Text>
@@ -409,62 +354,74 @@ export default function StoreScreen() {
               )}
             </ScrollView>
           )}
+          {/* ═══════════════════ PARTNER DEALS TAB ═══════════ */}
+          {activeTab === 'deals' && (
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.toolsEmpty}>
+                <Text style={styles.emptyIcon}>🤝</Text>
+                <Text style={styles.emptyTitle}>Partner Deals</Text>
+                <Text style={styles.emptyDesc}>
+                  {"Exclusive discounts from our financial wellness partners. Coming soon!"}
+                </Text>
+              </View>
+            </ScrollView>
+          )}
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FC' },
+  container: { flex: 1, backgroundColor: '#0A1628' },
   centered:  { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
 
   // ── Header ───────────────────────────────────────────────────
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee',
+    backgroundColor: '#0D1B2A', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1B3A6B' },
-  headerSub:   { fontSize: 12, color: '#888', marginTop: 2 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
   balancePill: {
-    backgroundColor: '#FFF7E6', borderRadius: 50,
+    backgroundColor: 'rgba(240,165,0,0.1)', borderRadius: 50,
     paddingHorizontal: 14, paddingVertical: 8,
     borderWidth: 1.5, borderColor: '#F0A500',
   },
-  balanceText: { fontSize: 15, fontWeight: '900', color: '#C07800' },
+  balanceText: { fontSize: 15, fontWeight: '900', color: '#F0A500' },
 
   // ── Tab bar ──────────────────────────────────────────────────
   tabBar: {
-    flexDirection: 'row', backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#eee',
+    flexDirection: 'row', backgroundColor: '#0D1B2A',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   tab:           { flex: 1, paddingVertical: 13, alignItems: 'center' },
-  tabActive:     { borderBottomWidth: 3, borderBottomColor: '#1B3A6B' },
-  tabText:       { fontSize: 12, fontWeight: '600', color: '#999' },
-  tabTextActive: { fontSize: 12, fontWeight: '800', color: '#1B3A6B' },
+  tabActive:     { borderBottomWidth: 3, borderBottomColor: '#F0A500' },
+  tabText:       { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.4)' },
+  tabTextActive: { fontSize: 12, fontWeight: '800', color: '#F0A500' },
 
   scrollContent: { padding: 16, paddingBottom: 48 },
   sectionHint: {
-    fontSize: 12, color: '#888', textAlign: 'center',
+    fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center',
     marginBottom: 14, lineHeight: 16,
   },
 
   // ── Shop tab ─────────────────────────────────────────────────
   shopCard: {
-    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16,
+    flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16,
     padding: 16, marginBottom: 12, gap: 14,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
     elevation: 2, borderWidth: 1.5, borderColor: 'transparent',
   },
-  shopCardOwned:  { borderColor: '#27AE60', backgroundColor: '#F2FBF5' },
+  shopCardOwned:  { borderColor: '#27AE60', backgroundColor: 'rgba(39,174,96,0.08)' },
   shopIcon:       { fontSize: 36, marginTop: 2 },
   shopBody:       { flex: 1 },
   shopTitleRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  shopName:       { fontSize: 15, fontWeight: '800', color: '#1B3A6B', flex: 1 },
+  shopName:       { fontSize: 15, fontWeight: '800', color: '#fff', flex: 1 },
   ownedBadge:     { backgroundColor: '#27AE60', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
   ownedBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  shopDesc:       { fontSize: 12, color: '#555', lineHeight: 17, marginBottom: 10 },
+  shopDesc:       { fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 17, marginBottom: 10 },
   shopFooter:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   shopCostText:   { fontSize: 13, fontWeight: '700', color: '#F0A500' },
   buyBtn:         { backgroundColor: '#1B3A6B', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
@@ -474,49 +431,34 @@ const styles = StyleSheet.create({
   openBtnSmallText: { color: '#27AE60', fontWeight: '700', fontSize: 13 },
 
   // ── Buy Coins tab ────────────────────────────────────────────
-  premiumBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#FFF7E6', borderRadius: 14,
-    padding: 14, marginBottom: 14,
-    borderWidth: 1, borderColor: '#F0A500',
-  },
-  premiumBannerIcon:  { fontSize: 28 },
-  premiumBannerTitle: { fontSize: 14, fontWeight: '800', color: '#C07800' },
-  premiumBannerSub:   { fontSize: 12, color: '#888', marginTop: 2 },
-
-  packCard:        { backgroundColor: '#1B3A6B', borderRadius: 16, padding: 18, marginBottom: 12 },
-  packCardPopular: { backgroundColor: '#0D3B26' },
-  packCardBestVal: { backgroundColor: '#1B4A6B' },
-  packBadge:       { backgroundColor: '#F0A500', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 10 },
-  packBadgeBestVal: { backgroundColor: '#27AE60' },
-  packBadgeText:   { color: '#fff', fontSize: 11, fontWeight: '800' },
-  packRow:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  packName:        { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  packCoins:       { fontSize: 15, fontWeight: '700', color: '#F0A500' },
-  packCpp:         { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 3 },
-  packPricePill:   { backgroundColor: '#F0A500', borderRadius: 50, paddingHorizontal: 18, paddingVertical: 10 },
-  packPriceText:   { color: '#fff', fontSize: 18, fontWeight: '900' },
-  stripeNote:      { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 12, lineHeight: 18 },
-
   // ── My Tools tab ─────────────────────────────────────────────
   toolsEmpty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 20 },
   toolCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 16, padding: 16, marginBottom: 12, gap: 14,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   toolIcon: { fontSize: 36 },
   toolBody: { flex: 1 },
-  toolName: { fontSize: 16, fontWeight: '800', color: '#1B3A6B', marginBottom: 4 },
-  toolDesc: { fontSize: 12, color: '#555', lineHeight: 17 },
+  toolName: { fontSize: 16, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  toolDesc: { fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 17 },
   openBtn:  { backgroundColor: '#27AE60', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 10 },
   openBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
 
   // ── Empty states ─────────────────────────────────────────────
   emptyIcon:  { fontSize: 54, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#1B3A6B', marginBottom: 8, textAlign: 'center' },
-  emptyDesc:  { fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 8, textAlign: 'center' },
+  emptyDesc:  { fontSize: 14, color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
   shopCTA:    { backgroundColor: '#1B3A6B', borderRadius: 50, paddingHorizontal: 24, paddingVertical: 12 },
   shopCTAText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  skeletonCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+  },
+  skeletonBar: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
 });

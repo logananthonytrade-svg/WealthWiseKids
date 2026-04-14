@@ -1,0 +1,24 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="gcoin" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="40%" stop-color="#F5C518"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </radialGradient>
+    <filter id="coinDrop">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(245,197,24,0.4)"/>
+    </filter>
+  </defs>
+  <!-- Shadow layer -->
+  <circle cx="60" cy="62" r="52" fill="#B8860B" filter="url(#coinDrop)"/>
+  <!-- Main coin -->
+  <circle cx="60" cy="60" r="52" fill="url(#gcoin)"/>
+  <!-- Inner ring -->
+  <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
+  <!-- Text -->
+  <text x="60" y="45" text-anchor="middle" font-family="Georgia,serif" font-size="10" font-weight="700" fill="rgba(0,0,0,0.30)" letter-spacing="1">WEALTH</text>
+  <text x="60" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="26" font-weight="900" fill="rgba(0,0,0,0.20)">💰</text>
+  <text x="60" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="10" font-weight="700" fill="rgba(0,0,0,0.30)" letter-spacing="1">WISE</text>
+  <!-- Shine highlight -->
+  <ellipse cx="44" cy="40" rx="11" ry="7" fill="rgba(255,255,255,0.25)" transform="rotate(-30 44 40)"/>
+</svg>

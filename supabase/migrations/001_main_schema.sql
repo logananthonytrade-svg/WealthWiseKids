@@ -1,7 +1,60 @@
 -- ============================================================
 -- WealthWise Kids — Main Schema  (17 tables + RLS + seed data)
--- Run in Supabase SQL Editor BEFORE 002_bot_tables.sql
 -- ============================================================
+
+-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  -- profiles
+  DROP POLICY IF EXISTS "profiles_own" ON profiles;
+  -- child_profiles
+  DROP POLICY IF EXISTS "child_profiles_parent" ON child_profiles;
+  DROP POLICY IF EXISTS "child_profiles_self" ON child_profiles;
+  -- parental_consents
+  DROP POLICY IF EXISTS "consents_parent" ON parental_consents;
+  -- subscriptions
+  DROP POLICY IF EXISTS "subscriptions_own" ON subscriptions;
+  -- schools
+  DROP POLICY IF EXISTS "schools_public_read" ON schools;
+  -- lessons
+  DROP POLICY IF EXISTS "lessons_public_read" ON lessons;
+  -- quiz_questions
+  DROP POLICY IF EXISTS "quiz_public_read" ON quiz_questions;
+  -- student_progress
+  DROP POLICY IF EXISTS "progress_child" ON student_progress;
+  DROP POLICY IF EXISTS "progress_parent" ON student_progress;
+  DROP POLICY IF EXISTS "progress_child_write" ON student_progress;
+  DROP POLICY IF EXISTS "progress_child_update" ON student_progress;
+  -- quiz_attempts
+  DROP POLICY IF EXISTS "attempts_child" ON quiz_attempts;
+  DROP POLICY IF EXISTS "attempts_parent" ON quiz_attempts;
+  DROP POLICY IF EXISTS "attempts_child_write" ON quiz_attempts;
+  -- badges
+  DROP POLICY IF EXISTS "badges_public_read" ON badges;
+  -- student_badges
+  DROP POLICY IF EXISTS "student_badges_child" ON student_badges;
+  DROP POLICY IF EXISTS "student_badges_parent" ON student_badges;
+  DROP POLICY IF EXISTS "student_badges_write" ON student_badges;
+  -- wealth_coins
+  DROP POLICY IF EXISTS "coins_child" ON wealth_coins;
+  DROP POLICY IF EXISTS "coins_parent" ON wealth_coins;
+  DROP POLICY IF EXISTS "coins_child_write" ON wealth_coins;
+  -- coin_transactions
+  DROP POLICY IF EXISTS "coin_tx_child" ON coin_transactions;
+  DROP POLICY IF EXISTS "coin_tx_write" ON coin_transactions;
+  -- streaks
+  DROP POLICY IF EXISTS "streaks_child" ON streaks;
+  DROP POLICY IF EXISTS "streaks_parent" ON streaks;
+  DROP POLICY IF EXISTS "streaks_write" ON streaks;
+  -- budget_entries
+  DROP POLICY IF EXISTS "budget_child" ON budget_entries;
+  DROP POLICY IF EXISTS "budget_parent" ON budget_entries;
+  -- plaid_connections
+  DROP POLICY IF EXISTS "plaid_parent_only" ON plaid_connections;
+  -- saving_goals
+  DROP POLICY IF EXISTS "goals_child" ON saving_goals;
+  DROP POLICY IF EXISTS "goals_parent" ON saving_goals;
+EXCEPTION WHEN OTHERS THEN NULL; -- tables may not exist yet, that's fine
+END $$;
 
 -- ─── 1. profiles ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS profiles (
@@ -105,7 +158,8 @@ CREATE TABLE IF NOT EXISTS lessons (
   lesson_number  INTEGER NOT NULL,
   lesson_type    TEXT NOT NULL DEFAULT 'content' CHECK (lesson_type IN ('content','did_you_know','activity')),
   fun_fact       TEXT,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (school_id, lesson_number)
 );
 CREATE INDEX IF NOT EXISTS idx_lessons_school ON lessons(school_id, lesson_number);
 ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
@@ -335,6 +389,11 @@ INSERT INTO schools (id, title, description, order_number, icon_name, is_premium
 ON CONFLICT (id) DO NOTHING;
 
 -- School 1 Lessons (7 lessons)
+-- Remove any duplicates from aborted runs before inserting
+DELETE FROM lessons l1 USING lessons l2
+  WHERE l1.id > l2.id AND l1.school_id = l2.school_id AND l1.lesson_number = l2.lesson_number;
+ALTER TABLE lessons DROP CONSTRAINT IF EXISTS lessons_school_id_lesson_number_key;
+ALTER TABLE lessons ADD CONSTRAINT lessons_school_id_lesson_number_key UNIQUE (school_id, lesson_number);
 INSERT INTO lessons (school_id, title, content, lesson_number, lesson_type, fun_fact) VALUES
 (1,
  'What Is Money?',
@@ -477,7 +536,8 @@ THE POWER OF AUTOMATION: Once you set a savings goal, make it automatic. Set up 
 
 YOUR ASSIGNMENT: Write down three financial goals right now — one in each time category. Make them SMART. Then calculate how much you need to save each week to reach each one.',
  7, 'content',
- 'Research shows that people who write down their goals are 42% more likely to achieve them than those who just think about their goals. The act of writing makes it real.');
+ 'Research shows that people who write down their goals are 42% more likely to achieve them than those who just think about their goals. The act of writing makes it real.')
+ON CONFLICT (school_id, lesson_number) DO NOTHING;
 
 -- School 1 Quiz Questions (10 questions)
 INSERT INTO quiz_questions (school_id, question_text, question_type, options, correct_answer, explanation, difficulty, order_number) VALUES
@@ -559,7 +619,8 @@ INSERT INTO quiz_questions (school_id, question_text, question_type, options, co
  '["Simple, Manageable, Adaptable, Reasonable, Timely", "Specific, Measurable, Achievable, Relevant, Time-bound", "Saved, Money, Allocated, Resources, Together", "Spending, Managing, Accounting, Reviewing, Tracking"]'::jsonb,
  'Specific, Measurable, Achievable, Relevant, Time-bound',
  'SMART is a goal-setting framework: Specific (clear and detailed), Measurable (trackable with numbers), Achievable (realistic), Relevant (matters to you), and Time-bound (has a deadline). Goals with all five qualities are far more likely to be achieved.',
- 'medium', 10);
+ 'medium', 10)
+ON CONFLICT DO NOTHING;
 
 -- Badges (MVP set)
 INSERT INTO badges (name, description, icon_name, rarity, trigger_type, trigger_value) VALUES

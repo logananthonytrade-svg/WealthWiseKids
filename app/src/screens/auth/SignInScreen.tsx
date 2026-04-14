@@ -3,9 +3,11 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, KeyboardAvoidingView, Platform, StatusBar,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import supabase from '../../lib/supabase';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { hapticTap, hapticError } from '../../utils/haptics';
 
 type Props = { navigation: StackNavigationProp<AuthStackParamList, 'SignIn'> };
 
@@ -18,6 +20,7 @@ export default function SignInScreen({ navigation }: Props) {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
+      hapticError();
       setError('Please enter your email and password.');
       return;
     }
@@ -34,10 +37,13 @@ export default function SignInScreen({ navigation }: Props) {
       // Translate Supabase error messages into plain English
       if (signInError.message.includes('Invalid login')) {
         setError('Incorrect email or password. Please try again.');
+        hapticError();
       } else if (signInError.message.includes('Email not confirmed')) {
         setError('Please verify your email address first. Check your inbox for a link from us.');
+        hapticError();
       } else {
         setError(signInError.message);
+        hapticError();
       }
     }
     // On success, authStore listener handles navigation automatically
@@ -60,11 +66,12 @@ export default function SignInScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar barStyle="dark-content" />
+    <LinearGradient colors={['#0D1F3C', '#091528']} style={styles.gradient}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+      <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>← Back</Text>
@@ -81,7 +88,7 @@ export default function SignInScreen({ navigation }: Props) {
           placeholder="jane@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
-          placeholderTextColor="#aaa"
+          placeholderTextColor="rgba(255,255,255,0.3)"
         />
 
         <Text style={styles.label}>Password</Text>
@@ -91,10 +98,10 @@ export default function SignInScreen({ navigation }: Props) {
           onChangeText={setPassword}
           placeholder="Your password"
           secureTextEntry
-          placeholderTextColor="#aaa"
+          placeholderTextColor="rgba(255,255,255,0.3)"
         />
 
-        <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotRow}>
+        <TouchableOpacity onPress={() => { hapticTap(); handleForgotPassword(); }} style={styles.forgotRow}>
           <Text style={styles.forgotText}>Forgot Password?</Text>
         </TouchableOpacity>
 
@@ -105,52 +112,60 @@ export default function SignInScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={[styles.primaryBtn, loading && styles.disabled]}
-          onPress={handleSignIn}
+          onPress={() => { hapticTap(); handleSignIn(); }}
           disabled={loading}
         >
           <Text style={styles.primaryBtnText}>{loading ? 'Signing in…' : 'Sign In'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.switchRow} onPress={() => navigation.navigate('SignUp')}>
+        <TouchableOpacity style={styles.switchRow} onPress={() => { hapticTap(); navigation.navigate('SignUp'); }}>
           <Text style={styles.switchText}>
             Don't have an account? <Text style={styles.link}>Create one</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  scroll: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 48 },
-  backBtn: { marginBottom: 24 },
-  backText: { color: '#1B3A6B', fontSize: 15 },
-  title: { fontSize: 26, fontWeight: '800', color: '#1B3A6B', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 28 },
-  label: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
-  input: {
-    borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 12,
-    fontSize: 15, color: '#222', marginBottom: 16,
+  gradient: { flex: 1 },
+  container: { flex: 1 },
+  scroll: { paddingHorizontal: 28, paddingTop: 60, paddingBottom: 48 },
+  backBtn: { marginBottom: 28 },
+  backText: { color: 'rgba(255,255,255,0.65)', fontSize: 15 },
+  title: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 32 },
+  label: {
+    fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.55)',
+    marginBottom: 8, letterSpacing: 0.8, textTransform: 'uppercase',
   },
-  forgotRow: { alignItems: 'flex-end', marginBottom: 20, marginTop: -8 },
-  forgotText: { color: '#1B3A6B', fontSize: 13, fontWeight: '600' },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: '#fff', marginBottom: 20,
+  },
+  forgotRow: { alignItems: 'flex-end', marginBottom: 24, marginTop: -12 },
+  forgotText: { color: '#F5C518', fontSize: 13, fontWeight: '600' },
   successText: {
-    backgroundColor: '#F0FFF4', color: '#27AE60', padding: 12,
-    borderRadius: 8, fontSize: 13, marginBottom: 16,
+    backgroundColor: 'rgba(39,174,96,0.12)', color: '#4ADE80', padding: 12,
+    borderRadius: 10, fontSize: 13, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(39,174,96,0.25)',
   },
   errorText: {
-    backgroundColor: '#FFF0F0', color: '#C62828', padding: 12,
-    borderRadius: 8, fontSize: 13, marginBottom: 16,
+    backgroundColor: 'rgba(198,40,40,0.12)', color: '#FC8181', padding: 12,
+    borderRadius: 10, fontSize: 13, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(198,40,40,0.25)',
   },
   primaryBtn: {
-    backgroundColor: '#1B3A6B', borderRadius: 50,
+    backgroundColor: '#F5C518', borderRadius: 50,
     paddingVertical: 16, alignItems: 'center', marginBottom: 16,
   },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  disabled: { opacity: 0.6 },
-  switchRow: { alignItems: 'center' },
-  switchText: { fontSize: 14, color: '#666' },
-  link: { color: '#1B3A6B', fontWeight: '700' },
+  primaryBtnText: { color: '#1B3A6B', fontSize: 16, fontWeight: '800' },
+  disabled: { opacity: 0.5 },
+  switchRow: { alignItems: 'center', marginTop: 4 },
+  switchText: { fontSize: 14, color: 'rgba(255,255,255,0.5)' },
+  link: { color: '#F5C518', fontWeight: '700' },
 });

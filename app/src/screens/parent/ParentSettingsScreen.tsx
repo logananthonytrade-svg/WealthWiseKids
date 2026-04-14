@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Switch, TextInput,
+  TouchableOpacity, Switch, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import useAuthStore from '../../store/authStore';
+import { hapticTap } from '../../utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -31,7 +32,8 @@ export default function ParentSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.pageTitle}>Settings</Text>
 
         {/* Account Section */}
@@ -41,12 +43,12 @@ export default function ParentSettingsScreen() {
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
-        <TouchableOpacity style={styles.actionRow} onPress={handleManageSubscription} disabled={loading}>
+        <TouchableOpacity style={styles.actionRow} onPress={() => { hapticTap(); handleManageSubscription(); }} disabled={loading}>
           <Text style={styles.actionText}>💳 Manage Subscription</Text>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionRow, styles.signOutRow]} onPress={signOut}>
+        <TouchableOpacity style={[styles.actionRow, styles.signOutRow]} onPress={() => { hapticTap(); signOut(); }}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
@@ -60,6 +62,7 @@ export default function ParentSettingsScreen() {
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

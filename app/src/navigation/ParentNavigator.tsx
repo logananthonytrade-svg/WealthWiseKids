@@ -7,7 +7,6 @@ import MyChildrenScreen from '../screens/parent/MyChildrenScreen';
 import ParentReportsScreen from '../screens/parent/ParentReportsScreen';
 import ParentSettingsScreen from '../screens/parent/ParentSettingsScreen';
 import CreateChildProfileScreen from '../screens/auth/CreateChildProfileScreen';
-import BankApprovalScreen from '../screens/parent/BankApprovalScreen';
 
 export type ParentTabParamList = {
   MyChildren: undefined;
@@ -18,7 +17,6 @@ export type ParentTabParamList = {
 export type ParentStackParamList = {
   ParentTabs: undefined;
   CreateChildProfile: undefined;
-  BankApproval: { childId: string; childName: string };
 };
 
 const Tab = createBottomTabNavigator<ParentTabParamList>();
@@ -54,7 +52,6 @@ export default function ParentNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ParentTabs" component={ParentTabs} />
       <Stack.Screen name="CreateChildProfile" component={CreateChildProfileScreen} />
-      <Stack.Screen name="BankApproval" component={BankApprovalScreen} />
     </Stack.Navigator>
   );
 }

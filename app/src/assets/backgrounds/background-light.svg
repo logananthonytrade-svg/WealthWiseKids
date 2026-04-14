@@ -1,0 +1,12 @@
+<svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="glight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(27,58,107,0.06)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </linearGradient>
+  </defs>
+  <rect width="390" height="844" fill="#F8F9FC"/>
+  <rect width="390" height="200" fill="url(#glight)"/>
+  <circle cx="-20" cy="120" r="180" fill="rgba(27,58,107,0.04)"/>
+  <circle cx="420" cy="600" r="200" fill="rgba(27,58,107,0.03)"/>
+</svg>

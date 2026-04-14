@@ -2,6 +2,15 @@
 -- WealthWise Kids — School Coin Tier System
 -- Run AFTER 003_lesson_chapters.sql
 --
+-- Drop policies so this script is safe to re-run
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "qbs_child_read" ON quiz_best_scores;
+  DROP POLICY IF EXISTS "qbs_parent_read" ON quiz_best_scores;
+  DROP POLICY IF EXISTS "sca_child_read" ON school_coin_awards;
+  DROP POLICY IF EXISTS "sca_parent_read" ON school_coin_awards;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 -- Adds:
 --   • quiz_best_scores   — best score (0–50) per child per lesson quiz
 --   • school_coin_awards — anti-farming coin tracker per child per school

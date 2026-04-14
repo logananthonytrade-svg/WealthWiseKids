@@ -8,10 +8,13 @@ import { RouteProp } from '@react-navigation/native';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import supabase from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
-import { checkAndAwardBadges } from '../../utils/badgeUtils';
+import { checkAndAwardBadges, checkAndAwardLessonBadges, checkAndAwardStreakBadges, checkAndAwardPerfectCountBadges } from '../../utils/badgeUtils';
 import { updateStreak } from '../../utils/streakUtils';
+import { awardCoins } from '../../utils/rewardUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
+import CoinAwardPop from '../../components/CoinAwardPop';
+import { hapticTap, hapticSuccess } from '../../utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -59,6 +62,7 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
   const [newBadges, setNewBadges]         = useState<BadgeRecord[]>([]);
   const [schoolProgress, setSchoolProgress] = useState<SchoolProgress | null>(null);
   const [progressLoading, setProgressLoading] = useState(false);
+  const [coinPop, setCoinPop]             = useState({ amount: 0, nonce: 0 });
 
   const correctAnim = useRef(new Animated.Value(0)).current;
   const resultAnim  = useRef(new Animated.Value(0)).current;
@@ -77,6 +81,7 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
 
   const handleSelect = (answer: string) => {
     if (revealed) return;
+    hapticTap();
     setSelected(answer);
     setRevealed(true);
 
@@ -148,6 +153,10 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
       if (res.ok) {
         const data: SchoolProgress = await res.json();
         setSchoolProgress(data);
+        if (data.coins_awarded > 0) {
+          setCoinPop({ amount: data.coins_awarded, nonce: Date.now() });
+          hapticSuccess();
+        }
       }
     } catch (err) {
       console.error('recordChapterScore error:', err);
@@ -172,6 +181,18 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
     }, { onConflict: 'child_id,lesson_id' });
 
     await updateStreak(childId);
+
+    // ── Coin awards (backend-gated, idempotent) ──────────────────
+    // 10 coins for completing this chapter (one-time per lesson)
+    const chapterReward = await awardCoins(childId, 'chapter_complete', { lesson_id: lessonId });
+    // 5 × streak-multiplier coins for first activity of the day
+    const streakReward = await awardCoins(childId, 'daily_streak');
+
+    const totalAwarded = (chapterReward?.coins_awarded ?? 0) + (streakReward?.coins_awarded ?? 0);
+    if (totalAwarded > 0) {
+      setCoinPop({ amount: totalAwarded, nonce: Date.now() + 1 });
+      hapticSuccess();
+    }
 
     const badges: BadgeRecord[] = [];
 
@@ -230,6 +251,7 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
 
     return (
       <SafeAreaView style={[styles.container, passed ? styles.bgPass : styles.bgFail]}>
+        <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
         <ScrollView contentContainerStyle={styles.resultContent} showsVerticalScrollIndicator={false}>
 
           {/* Score circle */}
@@ -303,17 +325,17 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
 
           {/* CTA buttons */}
           {passed ? (
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleContinue} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => { hapticTap(); handleContinue(); }} activeOpacity={0.85}>
               <Text style={styles.primaryBtnText}>
                 {isLastLesson ? 'Take the Final School Quiz ðŸŽ“' : 'Next Chapter â†’'}
               </Text>
             </TouchableOpacity>
           ) : (
             <>
-              <TouchableOpacity style={styles.retryBtn} onPress={handleRetry} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => { hapticTap(); handleRetry(); }} activeOpacity={0.85}>
                 <Text style={styles.retryBtnText}>Retry Chapter Quiz ðŸ”„</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.reviewBtn} onPress={() => navigation.goBack()}>
+              <TouchableOpacity style={styles.reviewBtn} onPress={() => { hapticTap(); navigation.goBack(); }}>
                 <Text style={styles.reviewBtnText}>Review the Chapter</Text>
               </TouchableOpacity>
             </>
@@ -332,9 +354,10 @@ export default function ChapterQuizScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => { hapticTap(); navigation.goBack(); }}>
           <Text style={styles.exitBtn}>âœ•</Text>
         </TouchableOpacity>
         <View style={styles.headerMeta}>

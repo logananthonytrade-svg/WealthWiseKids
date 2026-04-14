@@ -8,6 +8,7 @@ import { Dimensions } from 'react-native';
 import useAuthStore, { ChildProfile } from '../../store/authStore';
 import supabase from '../../lib/supabase';
 import LessonProgressBar from '../../components/lessons/LessonProgressBar';
+import { hapticTap } from '../../utils/haptics';
 
 type Tab = 'learning' | 'spending';
 
@@ -93,7 +94,7 @@ export default function ParentReportsScreen() {
           <TouchableOpacity
             key={c.id}
             style={[styles.childChip, selectedChild?.id === c.id && styles.chipActive]}
-            onPress={() => setSelectedChild(c)}
+            onPress={() => { hapticTap(); setSelectedChild(c); }}
           >
             <Text style={[styles.chipText, selectedChild?.id === c.id && styles.chipTextActive]}>
               {c.name}
@@ -106,13 +107,13 @@ export default function ParentReportsScreen() {
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, tab === 'learning' && styles.tabActive]}
-          onPress={() => setTab('learning')}
+          onPress={() => { hapticTap(); setTab('learning'); }}
         >
           <Text style={[styles.tabText, tab === 'learning' && styles.tabTextActive]}>Learning</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, tab === 'spending' && styles.tabActive]}
-          onPress={() => setTab('spending')}
+          onPress={() => { hapticTap(); setTab('spending'); }}
         >
           <Text style={[styles.tabText, tab === 'spending' && styles.tabTextActive]}>Spending</Text>
         </TouchableOpacity>
@@ -138,6 +139,13 @@ function LearningTab({ data }: { data: any }) {
 
   return (
     <View>
+      {lessons.length === 0 && attempts.length === 0 && badges.length === 0 && (
+        <View style={styles.noBank}>
+          <Text style={styles.noBankIcon}>📈</Text>
+          <Text style={styles.noBankText}>No learning reports yet.</Text>
+        </View>
+      )}
+
       {/* Quick stats */}
       <View style={styles.statRow}>
         <StatMini icon="📚" value={lessons.filter((l: any) => l.completed).length} label="Lessons" />
@@ -179,6 +187,15 @@ function SpendingTab({ data }: { data: any }) {
       <View style={styles.noBank}>
         <Text style={styles.noBankIcon}>🏦</Text>
         <Text style={styles.noBankText}>No bank connected yet.</Text>
+      </View>
+    );
+  }
+
+  if (entries.length === 0 && Object.keys(byCat ?? {}).length === 0) {
+    return (
+      <View style={styles.noBank}>
+        <Text style={styles.noBankIcon}>🧾</Text>
+        <Text style={styles.noBankText}>No spending reports yet.</Text>
       </View>
     );
   }

@@ -8,9 +8,12 @@ import { RouteProp } from '@react-navigation/native';
 import { StudentStackParamList } from '../../navigation/StudentNavigator';
 import supabase from '../../lib/supabase';
 import useAuthStore, { type AuthState } from '../../store/authStore';
-import { checkAndAwardBadges } from '../../utils/badgeUtils';
+import { checkAndAwardBadges, checkAndAwardPerfectCountBadges } from '../../utils/badgeUtils';
 import BadgeAwardModal from '../../components/BadgeAwardModal';
 import { BadgeRecord } from '../../utils/badgeUtils';
+import { awardCoins } from '../../utils/rewardUtils';
+import CoinAwardPop from '../../components/CoinAwardPop';
+import { hapticTap, hapticSuccess } from '../../utils/haptics';
 
 type Props = {
   navigation: StackNavigationProp<StudentStackParamList, 'QuizResults'>;
@@ -23,6 +26,7 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
 
   const [newBadges, setNewBadges]     = React.useState<BadgeRecord[]>([]);
   const [schoolCoins, setSchoolCoins] = React.useState<{ earned: number; percentage: number } | null>(null);
+  const [coinPop, setCoinPop]         = React.useState({ amount: 0, nonce: 0 });
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -59,15 +63,57 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
     });
 
     if (passed) {
-      // 2. Award graduation badge
-      const badges = await checkAndAwardBadges(childId, 'school_complete', String(schoolId));
-      if (badges.length > 0) setNewBadges(badges);
+      let earnedCoins = 0;
+      // ── Coin awards (backend-gated, idempotent) ─────────────────
+      // 25 coins for passing the school quiz (one-time per school)
+      const quizPassReward = await awardCoins(childId, 'quiz_pass', { school_id: schoolId });
+      earnedCoins += quizPassReward?.coins_awarded ?? 0;
+      // 200 coins for completing the full school (same trigger, separate reward_key)
+      const schoolReward = await awardCoins(childId, 'school_complete', { school_id: schoolId });
+      earnedCoins += schoolReward?.coins_awarded ?? 0;
+      // 50 bonus coins for a perfect score (one-time per school)
+      if (score === 100) {
+        const perfectReward = await awardCoins(childId, 'quiz_perfect', { school_id: schoolId });
+        earnedCoins += perfectReward?.coins_awarded ?? 0;
+      }
 
-      // 3. Check for 100% badge
+      if (earnedCoins > 0) {
+        setCoinPop({ amount: earnedCoins, nonce: Date.now() });
+        hapticSuccess();
+      }
+
+      // 2. Award graduation badge
+      const allBadges: BadgeRecord[] = [];
+      const gradBadges = await checkAndAwardBadges(childId, 'school_complete', String(schoolId));
+      allBadges.push(...gradBadges);
+
+      // 3. Check all_schools_complete — fire if child has passed all known schools
+      const { count: schoolCount } = await supabase
+        .from('schools')
+        .select('*', { count: 'exact', head: true });
+      const { count: passedCount } = await supabase
+        .from('quiz_attempts')
+        .select('school_id')
+        .eq('child_id', childId)
+        .eq('passed', true);
+      const distinctPassed = new Set(
+        ((await supabase.from('quiz_attempts').select('school_id').eq('child_id', childId).eq('passed', true)).data ?? [])
+          .map((r: any) => r.school_id)
+      ).size;
+      if (distinctPassed >= (schoolCount ?? Infinity)) {
+        const allSchoolBadges = await checkAndAwardBadges(childId, 'all_schools_complete');
+        allBadges.push(...allSchoolBadges);
+      }
+
+      // 4. Check for 100% badges (single + count milestones)
       if (score === 100) {
         const perfBadges = await checkAndAwardBadges(childId, 'quiz_perfect');
-        if (perfBadges.length > 0) setNewBadges((prev: BadgeRecord[]) => [...prev, ...perfBadges]);
+        allBadges.push(...perfBadges);
+        const countBadges = await checkAndAwardPerfectCountBadges(childId);
+        allBadges.push(...countBadges);
       }
+
+      if (allBadges.length > 0) setNewBadges(allBadges);
     }
   };
 
@@ -77,6 +123,7 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={[styles.container, passed ? styles.bgPassed : styles.bgFailed]}>
+      <CoinAwardPop amount={coinPop.amount} nonce={coinPop.nonce} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Score circle */}
@@ -125,7 +172,7 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
           <>
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => navigation.replace('StudentTabs')}
+              onPress={() => { hapticTap(); navigation.replace('SwipeHome'); }}
             >
               <Text style={styles.primaryBtnText}>Continue to Next School 🚀</Text>
             </TouchableOpacity>
@@ -134,13 +181,13 @@ export default function QuizResultsScreen({ navigation, route }: Props) {
           <>
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={() => navigation.replace('Quiz', { schoolId })}
+              onPress={() => { hapticTap(); navigation.replace('Quiz', { schoolId }); }}
             >
               <Text style={styles.primaryBtnText}>Try Again</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.secondaryBtn}
-              onPress={() => navigation.goBack()}
+              onPress={() => { hapticTap(); navigation.goBack(); }}
             >
               <Text style={styles.secondaryBtnText}>Review the Lessons</Text>
             </TouchableOpacity>

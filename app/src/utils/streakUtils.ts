@@ -7,7 +7,12 @@ import supabase from '../lib/supabase';
  * - 2+ days ago + freeze available → use freeze, reset to 1 (preserves streak briefly)
  * - 2+ days ago + no freeze → reset to 1
  */
-export async function updateStreak(childId: string): Promise<void> {
+/** Return value from updateStreak — caller uses newStreak for badge checks */
+export interface StreakResult {
+  newStreak: number;
+}
+
+export async function updateStreak(childId: string): Promise<StreakResult> {
   const { data } = await supabase
     .from('streaks')
     .select('*')
@@ -17,13 +22,13 @@ export async function updateStreak(childId: string): Promise<void> {
   if (!data) {
     // Create the row if somehow missing
     await supabase.from('streaks').insert({ child_id: childId, current_streak: 1, last_activity_date: today() });
-    return;
+    return { newStreak: 1 };
   }
 
   const lastDate  = data.last_activity_date;   // 'YYYY-MM-DD' or null
   const todayDate = today();
 
-  if (lastDate === todayDate) return; // Already counted today
+  if (lastDate === todayDate) return { newStreak: data.current_streak }; // Already counted today
 
   const daysSince = lastDate ? daysBetween(lastDate, todayDate) : null;
   let newStreak   = data.current_streak;
@@ -52,6 +57,8 @@ export async function updateStreak(childId: string): Promise<void> {
     last_activity_date: todayDate,
     freeze_available: freeze,
   }).eq('child_id', childId);
+
+  return { newStreak };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
