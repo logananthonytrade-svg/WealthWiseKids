@@ -24,7 +24,9 @@
     "android": {
       "package": "com.yourname.wealthwisekids",
       "versionCode": 1,
-      "permissions": ["NOTIFICATIONS"],
+      "permissions": [
+        "NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B3A6B"
@@ -37,6 +39,12 @@
     "plugins": [
       "expo-notifications",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7c5a56cc-d410-450e-94c7-524aaf8eaeab"
+      }
+    },
+    "owner": "forgedreamsai"
   }
 }
